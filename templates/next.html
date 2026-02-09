@@ -1,0 +1,1481 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Summarizer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+    <div class="header">
+        <h1><i class="fas fa-brain"></i> Smart Summarizer</h1>
+    </div>
+    <div class="main-content">
+        <div class="column">
+            <div class="column-header">
+                <h2>Sources</h2>
+                <button class="btn" id="upload-source-btn">
+                    <i class="fas fa-plus"></i> Add
+                </button>
+            </div>
+            <ul class="source-list" id="sources-list">
+                <li><i class="fas fa-compass"></i> Discover</li>
+            </ul>
+            <hr>
+            <div class="section">
+                <h3>Discover sources</h3>
+                <div class="section-content">
+                    <p>Saved sources will appear here. Click Add source above to add PDFs, websites, text, videos or
+                        audio files. Or import a file directly from Google Drive.</p>
+                </div>
+            </div>
+        </div>
+        <div class="column">
+            <div class="column-header">
+                <h2>Chat</h2>
+            </div>
+            <div class="chat-container" id="chat-container">
+                <p id="chat-placeholder">Add a source to get started</p>
+                <button class="btn-secondary" id="upload-source-btn-2">
+                    <i class="fas fa-upload"></i> Upload a source
+                </button>
+                <div class="summary-container" id="summary-container">
+                    <h3>Summary</h3>
+                    <div id="summary-content"></div>
+                    <div class="summary-actions">
+                        <button class="btn-secondary" id="download-text-btn">
+                            <i class="fas fa-download"></i> Download Text
+                        </button>
+                        <button class="btn-secondary" id="generate-audio-btn">
+                            <i class="fas fa-volume-up"></i> Generate Audio
+                        </button>
+                    </div>
+                </div>
+                <div class="search-box">
+                    <input type="text" class="search-input" id="chat-input" placeholder="Upload a source to get started"
+                        disabled>
+                    <button class="search-btn" id="send-message-btn" disabled>
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+                <div class="chat-messages" id="chat-messages">
+                </div>
+            </div>
+        </div>
+        <div class="column">
+            <div class="column-header">
+                <h2>Share Settings</h2>
+            </div>
+            <div class="section">
+                <h3>Studio</h3>
+                <div class="section-content">
+                    <p>Create an Audio Overview in: <a href="#" class="link">end_start_ysvald, #s_id, aeurope, rmdl,
+                            ifmail, gul@g.dcavb</a></p>
+                    <div class="features-grid">
+                        <div class="feature-box" data-feature="audio">
+                            <i class="fas fa-headphones feature-icon"></i>
+                            <span>Audio Overview</span>
+                        </div>
+                        <div class="feature-box" data-feature="video">
+                            <i class="fas fa-video feature-icon"></i>
+                            <span>Video Overview</span>
+                        </div>
+                        <div class="feature-box" data-feature="mindmap">
+                            <i class="fas fa-project-diagram feature-icon"></i>
+                            <span>Mind Map</span>
+                        </div>
+                        <div class="feature-box" data-feature="reports">
+                            <i class="fas fa-file-alt feature-icon"></i>
+                            <span>Reports</span>
+                        </div>
+                    </div>
+                    <div class="language-selector">
+                        <label for="languages">Select Language:</label>
+                        <select id="languages">
+                            <option value="en">English</option>
+                            <option value="es">Spanish</option>
+                            <option value="fr">French</option>
+                            <option value="de">German</option>
+                            <option value="zh">Chinese</option>
+                            <option value="ja">Japanese</option>
+                            <option value="ru">Russian</option>
+                            <option value="ar">Arabic</option>
+                            <option value="hi">Hindi</option>
+                            <option value="pt">Portuguese</option>
+                        </select>
+                    </div>
+                    <hr>
+                    <p>Studio output will be saved here. After adding sources, click to add Audio Overview, study guide,
+                        mind map and more!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="upload-view" id="upload-view">
+        <button class="close-btn" id="close-upload-btn">
+            <i class="fas fa-times"></i>
+        </button>
+
+        <div class="upload-container">
+            <h1 class="upload-title">Create Audio and Video Overviews from <span class="highlight-text">your
+                    notes</span></h1>
+
+            <div class="search-section">
+                <div class="search-bar-large">
+                    <i class="fas fa-search"></i>
+                    <input type="text" placeholder="Search the web for new sources" id="web-search-input">
+                    <button class="search-submit-btn">
+                        <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+                <div class="search-filters">
+                    <button class="filter-btn">
+                        <i class="fas fa-globe"></i> Web <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <button class="filter-btn">
+                        <i class="fas fa-bolt"></i> Fast research <i class="fas fa-chevron-down"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="drop-zone" id="drop-area">
+                <p class="drop-text">or drop your files</p>
+                <p class="drop-subtext">pdf, images, docs, audio, <span class="link-text">and more</span></p>
+
+                <div class="upload-buttons">
+                    <button class="upload-btn" id="file-select-btn">
+                        <i class="fas fa-upload"></i> Upload files
+                    </button>
+                    <button class="upload-btn" data-type="website">
+                        <i class="fas fa-link"></i><i class="fab fa-youtube" style="margin-left: 4px;"></i> Websites
+                    </button>
+                    <button class="upload-btn" data-type="drive">
+                        <i class="fab fa-google-drive"></i> Drive
+                    </button>
+                    <button class="upload-btn" data-type="copied">
+                        <i class="fas fa-clipboard"></i> Copied text
+                    </button>
+                </div>
+            </div>
+
+            <input type="file" id="file-input" multiple style="display: none;">
+
+            <div class="language-selector-inline">
+                <label for="upload-languages">Language:</label>
+                <select id="upload-languages">
+                    <option value="en">English</option>
+                    <option value="es">Spanish</option>
+                    <option value="fr">French</option>
+                    <option value="de">German</option>
+                    <option value="zh">Chinese</option>
+                    <option value="ja">Japanese</option>
+                    <option value="ru">Russian</option>
+                    <option value="ar">Arabic</option>
+                    <option value="hi">Hindi</option>
+                    <option value="pt">Portuguese</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    <div class="toast" id="toast"></div>
+    <script>
+        const uploadSourceBtn = document.getElementById('upload-source-btn');
+        const uploadSourceBtn2 = document.getElementById('upload-source-btn-2');
+        const closeUploadBtn = document.getElementById('close-upload-btn');
+        const uploadView = document.getElementById('upload-view');
+        const mainContent = document.querySelector('.main-content');
+        const header = document.querySelector('.header');
+        const fileInput = document.getElementById('file-input');
+        const fileSelectBtn = document.getElementById('file-select-btn');
+        const dropArea = document.getElementById('drop-area');
+        const sourcesList = document.getElementById('sources-list');
+        const chatInput = document.getElementById('chat-input');
+        const sendMessageBtn = document.getElementById('send-message-btn');
+        const chatMessages = document.getElementById('chat-messages');
+        const chatPlaceholder = document.getElementById('chat-placeholder');
+        const toast = document.getElementById('toast');
+        const summaryContainer = document.getElementById('summary-container');
+        const summaryContent = document.getElementById('summary-content');
+        const downloadTextBtn = document.getElementById('download-text-btn');
+        const generateAudioBtn = document.getElementById('generate-audio-btn');
+        const languageSelector = document.getElementById('languages');
+        const uploadLanguageSelector = document.getElementById('upload-languages');
+        let sources = [];
+        let chatEnabled = false;
+        let currentText = '';
+        let currentSummary = '';
+        const API_BASE_URL = 'http://localhost:5000';
+        uploadSourceBtn.addEventListener('click', showUploadView);
+        uploadSourceBtn2.addEventListener('click', showUploadView);
+        closeUploadBtn.addEventListener('click', hideUploadView);
+        fileSelectBtn.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', handleFileUpload);
+        sendMessageBtn.addEventListener('click', sendMessage);
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+        downloadTextBtn.addEventListener('click', downloadSummary);
+        generateAudioBtn.addEventListener('click', generateAudioSummary);
+
+        // Language change listener - re-translate summary when language changes
+        languageSelector.addEventListener('change', function () {
+            if (currentText && currentSummary) {
+                const newLanguage = this.value;
+                showLoadingDialog('Translating to new language...');
+
+                // Re-generate summary in new language
+                fetch(`${API_BASE_URL}/generate_summary`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        text: currentText,
+                        language: newLanguage
+                    })
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        closeLoadingDialog();
+                        if (data.success) {
+                            currentSummary = data.summary;
+                            displaySummary(data.summary);
+                            showToast('Summary translated successfully!');
+                        } else {
+                            showToast('Error translating: ' + data.error);
+                        }
+                    })
+                    .catch(error => {
+                        closeLoadingDialog();
+                        console.error('Error:', error);
+                        showToast('Error translating summary');
+                    });
+            }
+        });
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, preventDefaults, false);
+        });
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropArea.addEventListener(eventName, highlight, false);
+        });
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, unhighlight, false);
+        });
+        function highlight() {
+            dropArea.classList.add('dragover');
+        }
+        function unhighlight() {
+            dropArea.classList.remove('dragover');
+        }
+        dropArea.addEventListener('drop', handleDrop, false);
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleFiles(files);
+        }
+
+        // Handle web search functionality
+        const webSearchInput = document.getElementById('web-search-input');
+        const searchSubmitBtn = document.querySelector('.search-submit-btn');
+
+        function performWebSearch() {
+            const query = webSearchInput.value.trim();
+            if (query) {
+                // Check if it's a URL
+                if (query.startsWith('http://') || query.startsWith('https://') || query.includes('.com') || query.includes('.org') || query.includes('youtube.com') || query.includes('youtu.be')) {
+                    showToast('Processing URL...');
+                    summarizeURL(query);
+                    webSearchInput.value = '';
+                } else if (currentSummary && currentText) {
+                    // If we have a summary, treat as AI question
+                    showLoadingDialog('Thinking...');
+                    const language = languageSelector.value;
+
+                    fetch(`${API_BASE_URL}/ask_question`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            text: currentText,
+                            summary: currentSummary,  // Pass summary for faster responses
+                            question: query,
+                            language: language
+                        })
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            closeLoadingDialog();
+                            if (data.success) {
+                                // Show answer in a nice dialog
+                                showAnswerDialog(query, data.answer);
+                            } else {
+                                showToast('Error: ' + data.error);
+                            }
+                        })
+                        .catch(error => {
+                            closeLoadingDialog();
+                            console.error('Error:', error);
+                            showToast('Error connecting to server');
+                        });
+
+                    webSearchInput.value = '';
+                } else {
+                    showToast('Please upload a document first, or enter a URL to summarize');
+                }
+            }
+        }
+
+        searchSubmitBtn.addEventListener('click', performWebSearch);
+        webSearchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                performWebSearch();
+            }
+        });
+
+        // Handle filter buttons (Web, Fast research)
+        const filterButtons = document.querySelectorAll('.filter-btn');
+        let currentFilter = 'web';
+        filterButtons.forEach(btn => {
+            btn.addEventListener('click', function () {
+                const text = this.textContent.toLowerCase();
+                if (text.includes('web')) {
+                    currentFilter = 'web';
+                    showToast('Web search mode activated');
+                } else if (text.includes('fast')) {
+                    currentFilter = 'fast';
+                    showToast('Fast research mode activated');
+                }
+            });
+        });
+
+        // Handle new upload buttons
+        const uploadButtons = document.querySelectorAll('.upload-btn[data-type]');
+        uploadButtons.forEach(button => {
+            button.addEventListener('click', function () {
+                const type = this.getAttribute('data-type');
+
+                if (type === 'website') {
+                    showInputDialog('Enter Website or YouTube URL', 'https://example.com', (url) => {
+                        if (url && url.trim()) {
+                            summarizeURL(url.trim());
+                        }
+                    });
+                } else if (type === 'drive') {
+                    showToast('Google Drive integration coming soon! Please download and upload the file.');
+                } else if (type === 'copied') {
+                    showTextAreaDialog('Paste your text here', (text) => {
+                        if (text && text.trim()) {
+                            processText(text.trim());
+                        }
+                    });
+                }
+            });
+        });
+
+        const uploadOptions = document.querySelectorAll('.upload-option');
+        uploadOptions.forEach(option => {
+            option.addEventListener('click', function () {
+                const type = this.getAttribute('data-type');
+
+                if (type === 'link' || type === 'website') {
+                    showInputDialog('Enter URL', 'https://example.com', (url) => {
+                        if (url && url.trim()) {
+                            summarizeURL(url.trim());
+                        }
+                    });
+                } else if (type === 'youtube') {
+                    showInputDialog('Enter YouTube URL', 'https://www.youtube.com/watch?v=...', (url) => {
+                        if (url && url.trim()) {
+                            summarizeURL(url.trim());
+                        }
+                    });
+                } else if (type === 'paste' || type === 'copied') {
+                    showTextAreaDialog('Paste your text here', (text) => {
+                        if (text && text.trim()) {
+                            processText(text.trim());
+                        }
+                    });
+                } else if (type === 'drive' || type === 'docs' || type === 'slides') {
+                    showToast(`${type.charAt(0).toUpperCase() + type.slice(1)} integration coming soon! For now, please download and upload the file.`);
+                } else {
+                    showToast(`Selected: ${type.charAt(0).toUpperCase() + type.slice(1)} upload`);
+                }
+            });
+        });
+        const featureBoxes = document.querySelectorAll('.feature-box');
+        featureBoxes.forEach(box => {
+            box.addEventListener('click', function () {
+                const feature = this.getAttribute('data-feature');
+                if (!currentSummary) {
+                    showToast('Please add sources first to use this feature');
+                    return;
+                }
+
+                const language = languageSelector.value;
+
+                if (feature === 'audio') {
+                    generateStudioAudio(currentSummary, language);
+                } else if (feature === 'video') {
+                    generateStudioVideo(currentSummary, language);
+                } else if (feature === 'mindmap') {
+                    generateStudioMindmap(currentSummary);
+                } else if (feature === 'reports') {
+                    generateStudioReport(currentSummary, language);
+                }
+            });
+        });
+        function showUploadView() {
+            mainContent.style.opacity = '0';
+            header.style.opacity = '0';
+            setTimeout(() => {
+                mainContent.style.display = 'none';
+                header.style.display = 'none';
+                uploadView.classList.add('active');
+            }, 300);
+        }
+        function hideUploadView() {
+            uploadView.classList.remove('active');
+            setTimeout(() => {
+                mainContent.style.display = 'flex';
+                header.style.display = 'flex';
+                setTimeout(() => {
+                    mainContent.style.opacity = '1';
+                    header.style.opacity = '1';
+                }, 50);
+            }, 300);
+        }
+        function handleFileUpload(e) {
+            const files = e.target.files;
+            handleFiles(files);
+        }
+        function handleFiles(files) {
+            if (files.length > 0) {
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    uploadFile(file);
+                }
+            }
+        }
+        function uploadFile(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('language', uploadLanguageSelector.value);
+            showToast('Uploading and processing file...');
+            fetch(`${API_BASE_URL}/upload`, {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        addSource(file.name, file.type, data.text, data.summary);
+                        showToast('File processed successfully');
+                        hideUploadView();
+                    } else {
+                        showToast('Error: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('Error uploading file');
+                });
+        }
+        function summarizeURL(url) {
+            const language = uploadLanguageSelector.value;
+            showToast('Processing URL...');
+            fetch(`${API_BASE_URL}/summarize_url`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ url, language })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        addSource(url, 'website', data.text, data.summary);
+                        showToast('URL processed successfully');
+                        hideUploadView();
+                    } else {
+                        showToast('Error: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('Error processing URL');
+                });
+        }
+        function processText(text) {
+            const language = uploadLanguageSelector.value;
+            currentText = text;
+            showToast('Processing text...');
+            fetch(`${API_BASE_URL}/generate_summary`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ text, language })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        addSource('Pasted Text', 'text', text, data.summary);
+                        showToast('Text processed successfully');
+                        hideUploadView();
+                    } else {
+                        showToast('Error: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('Error processing text');
+                });
+        }
+        function addSource(name, type, text, summary) {
+            sources.push({ name, type, text, summary });
+            currentText = text;
+            currentSummary = summary;
+            const li = document.createElement('li');
+            li.className = 'source-item';
+            let iconClass = 'fas fa-file';
+            if (type.includes('pdf')) iconClass = 'fas fa-file-pdf';
+            else if (type.includes('text')) iconClass = 'fas fa-file-alt';
+            else if (type.includes('audio')) iconClass = 'fas fa-file-audio';
+            else if (type.includes('video')) iconClass = 'fas fa-file-video';
+            else if (type.includes('image')) iconClass = 'fas fa-file-image';
+            else if (type === 'website') iconClass = 'fas fa-globe';
+            li.innerHTML = `
+                <div class="source-info">
+                    <i class="${iconClass}"></i>
+                    <span>${name}</span>
+                </div>
+                <div class="source-actions">
+                    <button class="source-action"><i class="fas fa-trash"></i></button>
+                </div>
+            `;
+            sourcesList.insertBefore(li, sourcesList.childNodes[1]);
+            if (sources.length === 1) {
+                enableChat();
+                displaySummary(summary);
+            }
+            const deleteBtn = li.querySelector('.source-action');
+            deleteBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const index = sources.findIndex(source => source.name === name);
+                if (index > -1) {
+                    sources.splice(index, 1);
+                }
+                li.remove();
+                if (sources.length === 0) {
+                    disableChat();
+                    hideSummary();
+                }
+                showToast('Source removed');
+            });
+        }
+        function displaySummary(summary) {
+            summaryContent.textContent = summary;
+            summaryContainer.style.display = 'block';
+            chatPlaceholder.style.display = 'none';
+        }
+        function hideSummary() {
+            summaryContainer.style.display = 'none';
+            chatPlaceholder.style.display = 'block';
+        }
+        function enableChat() {
+            chatEnabled = true;
+            chatInput.disabled = false;
+            chatInput.placeholder = "Ask something about your sources...";
+            sendMessageBtn.disabled = false;
+            chatPlaceholder.textContent = "Ask questions about your sources";
+        }
+        function disableChat() {
+            chatEnabled = false;
+            chatInput.disabled = true;
+            chatInput.placeholder = "Upload a source to get started";
+            sendMessageBtn.disabled = true;
+            chatPlaceholder.textContent = "Add a source to get started";
+            chatMessages.style.display = 'none';
+            chatMessages.innerHTML = '';
+        }
+        function sendMessage() {
+            if (!chatEnabled || !chatInput.value.trim()) return;
+            const question = chatInput.value.trim();
+            chatInput.value = '';
+            addMessage(question, 'user');
+            const language = languageSelector.value;
+            fetch(`${API_BASE_URL}/ask_question`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    text: currentText,
+                    summary: currentSummary,  // Pass summary for faster responses
+                    question,
+                    language
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        addMessage(data.answer, 'ai');
+                    } else {
+                        addMessage('Error: ' + data.error, 'ai');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    addMessage('Error connecting to server', 'ai');
+                });
+        }
+        function addMessage(text, sender) {
+            if (chatMessages.style.display !== 'flex') {
+                chatMessages.style.display = 'flex';
+            }
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}-message`;
+            messageDiv.textContent = text;
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        function downloadSummary() {
+            if (!currentSummary) {
+                showToast('No summary available to download');
+                return;
+            }
+
+            // Create format selector UI
+            const formatSelector = document.createElement('div');
+            formatSelector.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: white;
+                padding: 30px;
+                border-radius: 12px;
+                box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+                z-index: 10000;
+                min-width: 300px;
+            `;
+
+            formatSelector.innerHTML = `
+                <h3 style="margin: 0 0 20px 0; color: #2c3e50;">Select format (txt, pdf, docx):</h3>
+                <div style="display: flex; gap: 10px; flex-direction: column;">
+                    <button class="format-btn" data-format="txt" style="padding: 12px; border: 2px solid #4caf50; background: white; border-radius: 6px; cursor: pointer; font-size: 16px; transition: all 0.3s;">TXT</button>
+                    <button class="format-btn" data-format="pdf" style="padding: 12px; border: 2px solid #4caf50; background: white; border-radius: 6px; cursor: pointer; font-size: 16px; transition: all 0.3s;">PDF</button>
+                    <button class="format-btn" data-format="docx" style="padding: 12px; border: 2px solid #4caf50; background: white; border-radius: 6px; cursor: pointer; font-size: 16px; transition: all 0.3s;">DOCX</button>
+                    <button id="cancel-download" style="padding: 12px; border: 2px solid #ccc; background: white; border-radius: 6px; cursor: pointer; font-size: 16px; margin-top: 10px;">Cancel</button>
+                </div>
+            `;
+
+            document.body.appendChild(formatSelector);
+
+            const formatButtons = formatSelector.querySelectorAll('.format-btn');
+            formatButtons.forEach(btn => {
+                btn.addEventListener('mouseenter', function () {
+                    this.style.background = '#4caf50';
+                    this.style.color = 'white';
+                });
+                btn.addEventListener('mouseleave', function () {
+                    this.style.background = 'white';
+                    this.style.color = 'black';
+                });
+                btn.addEventListener('click', function () {
+                    const format = this.getAttribute('data-format');
+                    document.body.removeChild(formatSelector);
+                    performDownload(format);
+                });
+            });
+
+            document.getElementById('cancel-download').addEventListener('click', function () {
+                document.body.removeChild(formatSelector);
+            });
+        }
+
+        function performDownload(format) {
+            showToast(`Generating ${format.toUpperCase()} file...`);
+
+            fetch(`${API_BASE_URL}/download_summary`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    summary: currentSummary,
+                    format: format
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const a = document.createElement('a');
+                        a.href = data.download_url;
+                        a.download = `summary.${format}`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        showToast('Summary downloaded successfully');
+                    } else {
+                        showToast('Error: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('Error downloading summary');
+                });
+        }
+
+        function generateAudioSummary() {
+            const language = languageSelector.value;
+            if (!currentSummary) {
+                showToast('No summary available');
+                return;
+            }
+            generateStudioAudio(currentSummary, language);
+        }
+
+        function generateStudioVideo(text, language) {
+            showToast('Generating video overview...');
+
+            fetch(`${API_BASE_URL}/studio/video`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ text, language })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Show preview with download option
+                        showImagePreviewDialog('Video Overview', data.video_base64, data.filename);
+                        showToast('Video overview generated!');
+                    } else {
+                        showToast('Error: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('Error generating video overview');
+                });
+        }
+
+        function generateStudioMindmap(text) {
+            showToast('Generating mind map...');
+
+            fetch(`${API_BASE_URL}/studio/mindmap`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ text })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Show preview with download option
+                        showImagePreviewDialog('Mind Map', data.mindmap_base64, data.filename);
+                        showToast('Mind map generated!');
+                    } else {
+                        showToast('Error: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('Error generating mind map');
+                });
+        }
+
+        function generateStudioAudio(text, language) {
+            showToast('Generating audio overview...');
+
+            fetch(`${API_BASE_URL}/studio/audio`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ text, language })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Show audio player with download option
+                        showAudioPreviewDialog(data.audio_base64, data.filename);
+                        showToast('Audio overview generated!');
+                    } else {
+                        showToast('Error: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('Error generating audio overview');
+                });
+        }
+
+        // Preview dialog for images (video and mindmap)
+        function showImagePreviewDialog(title, base64Data, filename) {
+            // Remove any existing preview dialogs first
+            const existingDialogs = document.querySelectorAll('.preview-dialog');
+            existingDialogs.forEach(d => d.remove());
+
+            const dialog = document.createElement('div');
+            dialog.className = 'preview-dialog';
+            dialog.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: white;
+                padding: 30px;
+                border-radius: 16px;
+                box-shadow: 0 10px 50px rgba(0, 0, 0, 0.3);
+                z-index: 10001;
+                max-width: 90%;
+                max-height: 90%;
+                overflow-y: auto;
+            `;
+
+            const uniqueId = Date.now();
+            dialog.innerHTML = `
+                <div style="text-align: center;">
+                    <h2 style="color: #2c3e50; margin-bottom: 20px;">
+                        <i class="fas fa-${title.includes('Video') ? 'video' : 'project-diagram'}" style="color: #667eea;"></i> ${title}
+                    </h2>
+                    <img src="data:image/png;base64,${base64Data}" style="max-width: 100%; max-height: 60vh; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                    <div style="margin-top: 20px; display: flex; gap: 12px; justify-content: center;">
+                        <button id="download-image-btn-${uniqueId}" style="padding: 12px 24px; border: none; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 10px; cursor: pointer; font-size: 15px; font-weight: 600;">
+                            <i class="fas fa-download"></i> Download
+                        </button>
+                        <button id="close-preview-btn-${uniqueId}" style="padding: 12px 24px; border: 2px solid #ccc; background: white; color: #666; border-radius: 10px; cursor: pointer; font-size: 15px; font-weight: 600;">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(dialog);
+
+            document.getElementById(`download-image-btn-${uniqueId}`).addEventListener('click', () => {
+                downloadBase64File(base64Data, filename, 'image/png');
+                showToast('Downloaded successfully!');
+            });
+
+            document.getElementById(`close-preview-btn-${uniqueId}`).addEventListener('click', () => {
+                document.body.removeChild(dialog);
+            });
+        }
+
+        // Preview dialog for audio
+        function showAudioPreviewDialog(base64Data, filename) {
+            // Remove any existing audio dialogs first
+            const existingDialogs = document.querySelectorAll('.audio-preview-dialog');
+            existingDialogs.forEach(d => {
+                const audio = d.querySelector('audio');
+                if (audio && audio.src) {
+                    URL.revokeObjectURL(audio.src);
+                }
+                d.remove();
+            });
+
+            const dialog = document.createElement('div');
+            dialog.className = 'audio-preview-dialog';
+            dialog.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: white;
+                padding: 30px;
+                border-radius: 16px;
+                box-shadow: 0 10px 50px rgba(0, 0, 0, 0.3);
+                z-index: 10001;
+                min-width: 400px;
+            `;
+
+            const audioBlob = base64ToBlob(base64Data, 'audio/mpeg');
+            const audioUrl = URL.createObjectURL(audioBlob);
+
+            const uniqueId = Date.now();
+            dialog.innerHTML = `
+                <div style="text-align: center;">
+                    <h2 style="color: #2c3e50; margin-bottom: 20px;">
+                        <i class="fas fa-headphones" style="color: #667eea;"></i> Audio Overview
+                    </h2>
+                    <audio controls style="width: 100%; margin: 20px 0;">
+                        <source src="${audioUrl}" type="audio/mpeg">
+                        Your browser does not support the audio element.
+                    </audio>
+                    <div style="margin-top: 20px; display: flex; gap: 12px; justify-content: center;">
+                        <button id="download-audio-btn-${uniqueId}" style="padding: 12px 24px; border: none; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 10px; cursor: pointer; font-size: 15px; font-weight: 600;">
+                            <i class="fas fa-download"></i> Download
+                        </button>
+                        <button id="close-audio-btn-${uniqueId}" style="padding: 12px 24px; border: 2px solid #ccc; background: white; color: #666; border-radius: 10px; cursor: pointer; font-size: 15px; font-weight: 600;">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(dialog);
+
+            document.getElementById(`download-audio-btn-${uniqueId}`).addEventListener('click', () => {
+                downloadBase64File(base64Data, filename, 'audio/mpeg');
+                showToast('Downloaded successfully!');
+            });
+
+            document.getElementById(`close-audio-btn-${uniqueId}`).addEventListener('click', () => {
+                URL.revokeObjectURL(audioUrl);
+                document.body.removeChild(dialog);
+            });
+        }
+
+        // Helper function to convert base64 to blob
+        function base64ToBlob(base64Data, mimeType) {
+            const byteCharacters = atob(base64Data);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            return new Blob([byteArray], { type: mimeType });
+        }
+
+        // Helper function to download base64 files
+        function downloadBase64File(base64Data, filename, mimeType) {
+            const byteCharacters = atob(base64Data);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            const blob = new Blob([byteArray], { type: mimeType });
+
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+        }
+
+        function generateStudioReport(text, language) {
+            showToast('Generating report...');
+
+            fetch(`${API_BASE_URL}/studio/report`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ text, language })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Add to Discover sources section
+                        addDiscoverItem('report', data.report_html, 'report.html', data.report_data);
+                        showToast('Report saved to Discover sources!');
+                    } else {
+                        showToast('Error: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('Error generating report');
+                });
+        }
+
+        // Add generated items to Discover sources section
+        function addDiscoverItem(type, data, filename, extraData = null) {
+            const li = document.createElement('li');
+            li.className = 'source-item discover-item';
+
+            let iconClass = 'fas fa-file';
+            let displayName = filename;
+
+            if (type === 'audio') {
+                iconClass = 'fas fa-headphones';
+                displayName = 'Audio Overview';
+            } else if (type === 'video') {
+                iconClass = 'fas fa-video';
+                displayName = 'Video Overview';
+            } else if (type === 'mindmap') {
+                iconClass = 'fas fa-project-diagram';
+                displayName = 'Mind Map';
+            } else if (type === 'report') {
+                iconClass = 'fas fa-file-alt';
+                displayName = 'Report';
+            }
+
+            li.innerHTML = `
+                <div class="source-info" style="cursor: pointer;">
+                    <i class="${iconClass}" style="color: #667eea;"></i>
+                    <span>${displayName}</span>
+                </div>
+                <div class="source-actions">
+                    <button class="source-action download-btn" title="Download">
+                        <i class="fas fa-download"></i>
+                    </button>
+                    <button class="source-action delete-btn" title="Delete">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            `;
+
+            // Insert after "Discover" item
+            const discoverItem = sourcesList.querySelector('li:first-child');
+            if (discoverItem.nextSibling) {
+                sourcesList.insertBefore(li, discoverItem.nextSibling);
+            } else {
+                sourcesList.appendChild(li);
+            }
+
+            // Click to view/play
+            li.querySelector('.source-info').addEventListener('click', () => {
+                viewDiscoverItem(type, data, displayName, extraData);
+            });
+
+            // Download button
+            li.querySelector('.download-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (type === 'audio') {
+                    downloadBase64File(data, filename, 'audio/mpeg');
+                } else if (type === 'video' || type === 'mindmap') {
+                    downloadBase64File(data, filename, 'image/png');
+                } else if (type === 'report') {
+                    downloadReportHTML(data, extraData);
+                }
+                showToast('Downloaded successfully!');
+            });
+
+            // Delete button
+            li.querySelector('.delete-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                li.remove();
+                showToast('Item removed');
+            });
+        }
+
+        // View/Play discover items
+        function viewDiscoverItem(type, data, title, extraData) {
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.7);
+                z-index: 10000;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                animation: fadeIn 0.3s ease;
+            `;
+
+            const content = document.createElement('div');
+            content.style.cssText = `
+                background: white;
+                padding: 30px;
+                border-radius: 16px;
+                max-width: 90%;
+                max-height: 90%;
+                overflow-y: auto;
+                position: relative;
+            `;
+
+            let innerHTML = `
+                <button onclick="this.closest('div[style*=\\'position: fixed\\']').remove()" style="position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 24px; cursor: pointer; color: #999;">
+                    <i class="fas fa-times"></i>
+                </button>
+                <h2 style="color: #2c3e50; margin-bottom: 20px;">
+                    <i class="fas fa-${type === 'audio' ? 'headphones' : type === 'video' ? 'video' : type === 'mindmap' ? 'project-diagram' : 'file-alt'}"></i>
+                    ${title}
+                </h2>
+            `;
+
+            if (type === 'audio') {
+                const audioUrl = 'data:audio/mpeg;base64,' + data;
+                innerHTML += `
+                    <audio controls autoplay style="width: 100%; max-width: 600px;">
+                        <source src="${audioUrl}" type="audio/mpeg">
+                        Your browser does not support the audio element.
+                    </audio>
+                `;
+            } else if (type === 'video' || type === 'mindmap') {
+                const imgUrl = 'data:image/png;base64,' + data;
+                innerHTML += `
+                    <img src="${imgUrl}" style="max-width: 100%; height: auto; border-radius: 8px;" alt="${title}">
+                `;
+            } else if (type === 'report') {
+                innerHTML += data; // HTML content
+            }
+
+            content.innerHTML = innerHTML;
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+
+            // Close on background click
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.remove();
+                }
+            });
+        }
+
+        function downloadReportHTML(htmlContent, reportData) {
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `report_${Date.now()}.html`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+        }
+
+        function displayStudioOutput(type, content, extraData) {
+            // Create or get studio output container
+            let studioOutput = document.getElementById('studio-output-container');
+            if (!studioOutput) {
+                studioOutput = document.createElement('div');
+                studioOutput.id = 'studio-output-container';
+                studioOutput.style.cssText = `
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    background: white;
+                    padding: 30px;
+                    border-radius: 12px;
+                    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+                    z-index: 10000;
+                    max-width: 90%;
+                    max-height: 90%;
+                    overflow-y: auto;
+                `;
+                document.body.appendChild(studioOutput);
+            }
+
+            let outputHTML = '';
+
+            if (type === 'audio') {
+                outputHTML = `
+                    <div style="text-align: center;">
+                        <h2 style="color: #2c3e50; margin-bottom: 20px;">
+                            <i class="fas fa-headphones" style="color: #4caf50;"></i> Audio Overview
+                        </h2>
+                        <audio controls style="width: 100%; max-width: 500px; margin: 20px 0;">
+                            <source src="${content}" type="audio/mpeg">
+                            Your browser does not support the audio element.
+                        </audio>
+                        <div style="margin-top: 20px;">
+                            <a href="${content}" download="audio_overview.mp3" class="btn" style="display: inline-block; text-decoration: none; padding: 10px 20px; background: #4caf50; color: white; border-radius: 6px;">
+                                <i class="fas fa-download"></i> Download Audio
+                            </a>
+                        </div>
+                    </div>
+                `;
+            } else if (type === 'video') {
+                outputHTML = `
+                    <div style="text-align: center;">
+                        <h2 style="color: #2c3e50; margin-bottom: 20px;">
+                            <i class="fas fa-video" style="color: #4caf50;"></i> Video Overview
+                        </h2>
+                        <img src="${content}" style="max-width: 100%; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);" alt="Video Overview">
+                        ${extraData ? `
+                            <div style="margin-top: 20px; text-align: left; max-width: 600px; margin-left: auto; margin-right: auto;">
+                                <h3 style="color: #4e7ae7;">Key Points:</h3>
+                                <ul style="line-height: 2;">
+                                    ${extraData.map(point => `<li>${point}</li>`).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            } else if (type === 'mindmap') {
+                outputHTML = `
+                    <div style="text-align: center;">
+                        <h2 style="color: #2c3e50; margin-bottom: 20px;">
+                            <i class="fas fa-project-diagram" style="color: #4caf50;"></i> Mind Map
+                        </h2>
+                        <img src="${content}?t=${Date.now()}" style="max-width: 100%; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);" alt="Mind Map">
+                        <div style="margin-top: 20px;">
+                            <a href="${content}" download="mindmap.png" class="btn" style="display: inline-block; text-decoration: none; padding: 10px 20px; background: #4caf50; color: white; border-radius: 6px;">
+                                <i class="fas fa-download"></i> Download Mind Map
+                            </a>
+                        </div>
+                    </div>
+                `;
+            } else if (type === 'report') {
+                outputHTML = `
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h2 style="color: #2c3e50; margin: 0;">
+                                <i class="fas fa-file-alt" style="color: #4caf50;"></i> Report
+                            </h2>
+                            <button onclick="downloadReportPDF()" class="btn" style="padding: 10px 20px; background: #4caf50; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                                <i class="fas fa-download"></i> Download PDF
+                            </button>
+                        </div>
+                        <div style="max-height: 500px; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px;">
+                            ${content}
+                        </div>
+                    </div>
+                `;
+
+                // Store report data for PDF download
+                window.currentReportData = extraData;
+            }
+
+            outputHTML += `
+                <div style="text-align: center; margin-top: 30px;">
+                    <button onclick="closeStudioOutput()" class="btn-secondary" style="padding: 10px 20px; background: #f0f0f0; color: #555; border: none; border-radius: 6px; cursor: pointer;">
+                        Close
+                    </button>
+                </div>
+            `;
+
+            studioOutput.innerHTML = outputHTML;
+            studioOutput.style.display = 'block';
+        }
+
+        function closeStudioOutput() {
+            const studioOutput = document.getElementById('studio-output-container');
+            if (studioOutput) {
+                studioOutput.style.display = 'none';
+            }
+        }
+
+        function downloadReportPDF() {
+            if (!window.currentReportData) {
+                showToast('No report data available');
+                return;
+            }
+
+            showToast('Generating PDF...');
+
+            fetch(`${API_BASE_URL}/download_report_pdf`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    text: currentSummary,
+                    report_data: window.currentReportData
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const a = document.createElement('a');
+                        a.href = data.pdf_url;
+                        a.download = 'report.pdf';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        showToast('PDF downloaded successfully');
+                    } else {
+                        showToast('Error: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('Error downloading PDF');
+                });
+        }
+
+        function showInputDialog(title, placeholder, callback) {
+            const dialog = document.createElement('div');
+            dialog.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: white;
+                padding: 30px;
+                border-radius: 16px;
+                box-shadow: 0 10px 50px rgba(0, 0, 0, 0.3);
+                z-index: 10001;
+                min-width: 400px;
+                animation: slideIn 0.3s ease;
+            `;
+
+            dialog.innerHTML = `
+                <h3 style="margin: 0 0 20px 0; color: #2c3e50; font-size: 20px;">${title}</h3>
+                <input type="text" id="dialog-input" placeholder="${placeholder}" style="width: 100%; padding: 14px; border: 2px solid #e0e7ff; border-radius: 10px; font-size: 15px; margin-bottom: 20px;">
+                <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                    <button id="dialog-cancel" style="padding: 12px 24px; border: 2px solid #ccc; background: white; border-radius: 10px; cursor: pointer; font-size: 15px; font-weight: 600;">Cancel</button>
+                    <button id="dialog-ok" style="padding: 12px 24px; border: none; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 10px; cursor: pointer; font-size: 15px; font-weight: 600;">OK</button>
+                </div>
+            `;
+
+            document.body.appendChild(dialog);
+
+            const input = document.getElementById('dialog-input');
+            input.focus();
+
+            document.getElementById('dialog-ok').addEventListener('click', () => {
+                callback(input.value);
+                document.body.removeChild(dialog);
+            });
+
+            document.getElementById('dialog-cancel').addEventListener('click', () => {
+                document.body.removeChild(dialog);
+            });
+
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    callback(input.value);
+                    document.body.removeChild(dialog);
+                }
+            });
+        }
+
+        function showTextAreaDialog(title, callback) {
+            const dialog = document.createElement('div');
+            dialog.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: white;
+                padding: 30px;
+                border-radius: 16px;
+                box-shadow: 0 10px 50px rgba(0, 0, 0, 0.3);
+                z-index: 10001;
+                min-width: 500px;
+                animation: slideIn 0.3s ease;
+            `;
+
+            dialog.innerHTML = `
+                <h3 style="margin: 0 0 20px 0; color: #2c3e50; font-size: 20px;">${title}</h3>
+                <textarea id="dialog-textarea" placeholder="Paste or type your text here..." style="width: 100%; min-height: 200px; padding: 14px; border: 2px solid #e0e7ff; border-radius: 10px; font-size: 15px; margin-bottom: 20px; font-family: inherit; resize: vertical;"></textarea>
+                <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                    <button id="dialog-cancel" style="padding: 12px 24px; border: 2px solid #ccc; background: white; border-radius: 10px; cursor: pointer; font-size: 15px; font-weight: 600;">Cancel</button>
+                    <button id="dialog-ok" style="padding: 12px 24px; border: none; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 10px; cursor: pointer; font-size: 15px; font-weight: 600;">Process</button>
+                </div>
+            `;
+
+            document.body.appendChild(dialog);
+
+            const textarea = document.getElementById('dialog-textarea');
+            textarea.focus();
+
+            document.getElementById('dialog-ok').addEventListener('click', () => {
+                callback(textarea.value);
+                document.body.removeChild(dialog);
+            });
+
+            document.getElementById('dialog-cancel').addEventListener('click', () => {
+                document.body.removeChild(dialog);
+            });
+        }
+
+        let loadingDialog = null;
+
+        function showLoadingDialog(message = 'Loading...') {
+            if (loadingDialog) return; // Prevent multiple loading dialogs
+
+            loadingDialog = document.createElement('div');
+            loadingDialog.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: white;
+                padding: 40px;
+                border-radius: 16px;
+                box-shadow: 0 10px 50px rgba(0, 0, 0, 0.3);
+                z-index: 10002;
+                text-align: center;
+                animation: fadeIn 0.3s ease;
+            `;
+
+            loadingDialog.innerHTML = `
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 20px;">
+                    <div style="width: 50px; height: 50px; border: 4px solid #f3f3f3; border-top: 4px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                    <p style="color: #2c3e50; font-size: 16px; margin: 0; font-weight: 600;">${message}</p>
+                </div>
+                <style>
+                    @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                    }
+                </style>
+            `;
+
+            document.body.appendChild(loadingDialog);
+        }
+
+        function closeLoadingDialog() {
+            if (loadingDialog) {
+                document.body.removeChild(loadingDialog);
+                loadingDialog = null;
+            }
+        }
+
+        function showAnswerDialog(question, answer) {
+            const dialog = document.createElement('div');
+            dialog.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: white;
+                padding: 30px;
+                border-radius: 16px;
+                box-shadow: 0 10px 50px rgba(0, 0, 0, 0.3);
+                z-index: 10001;
+                min-width: 600px;
+                max-width: 800px;
+                max-height: 80vh;
+                overflow-y: auto;
+                animation: slideIn 0.3s ease;
+            `;
+
+            dialog.innerHTML = `
+                <div style="margin-bottom: 20px;">
+                    <h3 style="margin: 0 0 10px 0; color: #667eea; font-size: 18px;">Question:</h3>
+                    <p style="color: #2c3e50; font-size: 16px; margin: 0;">${question}</p>
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <h3 style="margin: 0 0 10px 0; color: #667eea; font-size: 18px;">Answer:</h3>
+                    <p style="color: #2c3e50; font-size: 15px; line-height: 1.8; margin: 0; white-space: pre-wrap;">${answer}</p>
+                </div>
+                <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                    <button id="dialog-close" style="padding: 12px 24px; border: none; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 10px; cursor: pointer; font-size: 15px; font-weight: 600;">Close</button>
+                </div>
+            `;
+
+            document.body.appendChild(dialog);
+
+            document.getElementById('dialog-close').addEventListener('click', () => {
+                document.body.removeChild(dialog);
+            });
+        }
+
+        function showToast(message) {
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+    </script>
+</body>
+
+</html>
