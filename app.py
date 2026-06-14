@@ -49,9 +49,9 @@ if os.getenv('GEMINI_API_KEY'):
 app = Flask(__name__)
 CORS(app)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-change-this-in-production')
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/users.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['UPLOAD_FOLDER'] = 'Uploads'
+app.config['UPLOAD_FOLDER'] = '/tmp/Uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['SESSION_COOKIE_SECURE'] = False  # Set to True in production with HTTPS
@@ -100,19 +100,22 @@ with app.app_context():
     db.create_all()
 
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
-    os.makedirs(app.config['UPLOAD_FOLDER'])
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 if not os.path.exists('static'):
-    os.makedirs('static')
+    os.makedirs('static', exist_ok=True)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 # Cleanup old files in static folder
 def cleanup_old_files():
     try:
-        # Delete files older than 1 hour
         cutoff_time = datetime.now() - timedelta(hours=1)
-        patterns = ['static/audio_*.mp3', 'static/video_*.png', 'static/mindmap_*.png', 'static/report_*.pdf', 'static/summary_*.*']
-        
+        static_dir = '/tmp' if os.environ.get('VERCEL') else 'static'
+        patterns = [
+            f'{static_dir}/audio_*.mp3', f'{static_dir}/video_*.png',
+            f'{static_dir}/mindmap_*.png', f'{static_dir}/report_*.pdf',
+            f'{static_dir}/summary_*.*'
+        ]
         for pattern in patterns:
             for filepath in glob.glob(pattern):
                 try:
@@ -715,17 +718,25 @@ def generate_report_document(text, language='en'):
         logger.error(f"Report generation error: {e}")
         return jsonify({'error': 'Report generation failed'}), 500
 
+def get_write_dir():
+    """Return writable directory — /tmp on Vercel, static/ locally."""
+    if os.environ.get('VERCEL'):
+        os.makedirs('/tmp', exist_ok=True)
+        return '/tmp'
+    os.makedirs('static', exist_ok=True)
+    return 'static'
+
 def download_report_pdf(text, report_data):
     try:
         timestamp = int(time.time())
         filename = f'report_{timestamp}.pdf'
-        filepath = os.path.join('static', filename)
+        write_dir = get_write_dir()
+        filepath = os.path.join(write_dir, filename)
         
         doc = SimpleDocTemplate(filepath, pagesize=letter)
         styles = getSampleStyleSheet()
         story = []
         
-        # Title
         title_style = ParagraphStyle(
             'CustomTitle',
             parent=styles['Heading1'],
@@ -736,23 +747,23 @@ def download_report_pdf(text, report_data):
         story.append(Paragraph(report_data.get('title', 'Summary Report'), title_style))
         story.append(Spacer(1, 0.2*inch))
         
-        # Introduction
         story.append(Paragraph('<b>Introduction</b>', styles['Heading2']))
         story.append(Paragraph(report_data.get('introduction', ''), styles['BodyText']))
         story.append(Spacer(1, 0.2*inch))
         
-        # Key Points
         story.append(Paragraph('<b>Key Points</b>', styles['Heading2']))
         for point in report_data.get('key_points', []):
             story.append(Paragraph(f'• {point}', styles['BodyText']))
         story.append(Spacer(1, 0.2*inch))
         
-        # Conclusion
         story.append(Paragraph('<b>Conclusion</b>', styles['Heading2']))
         story.append(Paragraph(report_data.get('conclusion', ''), styles['BodyText']))
         
         doc.build(story)
         
+        # On Vercel serve from /tmp via a special route; locally serve from /static
+        if os.environ.get('VERCEL'):
+            return f'/tmp-file/{filename}'
         return f'/static/{filename}'
     except Exception as e:
         logger.error(f"PDF generation error: {e}")
@@ -1307,44 +1318,39 @@ def download_summary_endpoint():
             return jsonify({'error': 'No summary provided'}), 400
         
         timestamp = int(time.time())
+        write_dir = get_write_dir()
+        is_vercel = os.environ.get('VERCEL')
         
         if format_type == 'txt':
             filename = f'summary_{timestamp}.txt'
-            filepath = os.path.join('static', filename)
+            filepath = os.path.join(write_dir, filename)
             with open(filepath, 'w', encoding='utf-8') as f:
                 f.write(summary)
-            return jsonify({'success': True, 'download_url': f'/static/{filename}'})
+            url = f'/tmp-file/{filename}' if is_vercel else f'/static/{filename}'
+            return jsonify({'success': True, 'download_url': url})
         
         elif format_type == 'pdf':
             filename = f'summary_{timestamp}.pdf'
-            filepath = os.path.join('static', filename)
-            
+            filepath = os.path.join(write_dir, filename)
             doc = SimpleDocTemplate(filepath, pagesize=letter)
             styles = getSampleStyleSheet()
             story = []
-            
-            title_style = ParagraphStyle(
-                'CustomTitle',
-                parent=styles['Heading1'],
-                fontSize=20,
-                spaceAfter=30
-            )
+            title_style = ParagraphStyle('CustomTitle', parent=styles['Heading1'], fontSize=20, spaceAfter=30)
             story.append(Paragraph('Summary', title_style))
             story.append(Paragraph(summary, styles['BodyText']))
-            
             doc.build(story)
-            return jsonify({'success': True, 'download_url': f'/static/{filename}'})
+            url = f'/tmp-file/{filename}' if is_vercel else f'/static/{filename}'
+            return jsonify({'success': True, 'download_url': url})
         
         elif format_type == 'docx':
             filename = f'summary_{timestamp}.docx'
-            filepath = os.path.join('static', filename)
-            
+            filepath = os.path.join(write_dir, filename)
             doc = docx.Document()
             doc.add_heading('Summary', 0)
             doc.add_paragraph(summary)
             doc.save(filepath)
-            
-            return jsonify({'success': True, 'download_url': f'/static/{filename}'})
+            url = f'/tmp-file/{filename}' if is_vercel else f'/static/{filename}'
+            return jsonify({'success': True, 'download_url': url})
         
         else:
             return jsonify({'error': 'Invalid format'}), 400
@@ -1362,6 +1368,15 @@ def ping():
         'groq_configured': bool(groq_key),
         'groq_key_prefix': groq_key[:10] if groq_key else None
     })
+
+@app.route('/tmp-file/<filename>')
+@login_required
+def serve_tmp_file(filename):
+    """Serve generated files from /tmp on Vercel."""
+    filepath = os.path.join('/tmp', filename)
+    if os.path.exists(filepath):
+        return send_file(filepath, as_attachment=True)
+    return jsonify({'error': 'File not found'}), 404
 
 @app.route('/cleanup')
 def cleanup():
