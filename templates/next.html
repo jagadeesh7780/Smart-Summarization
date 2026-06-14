@@ -12,6 +12,17 @@
 <body>
     <div class="header">
         <h1><i class="fas fa-brain"></i> Smart Summarizer</h1>
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <span style="color: white; font-size: 14px;">
+                <i class="fas fa-user-circle"></i> {{ current_user.name }}
+            </span>
+            <a href="/logout"
+                style="color: white; text-decoration: none; padding: 8px 16px; background: rgba(255,255,255,0.1); border-radius: 8px; transition: all 0.3s; display: flex; align-items: center; gap: 5px;"
+                onmouseover="this.style.background='rgba(255,255,255,0.2)'"
+                onmouseout="this.style.background='rgba(255,255,255,0.1)'">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </a>
+        </div>
     </div>
     <div class="main-content">
         <div class="column">
@@ -60,6 +71,9 @@
                     <button class="search-btn" id="send-message-btn" disabled>
                         <i class="fas fa-search"></i>
                     </button>
+                </div>
+                <div class="suggestions-container" id="suggestions-container">
+                    <!-- Smart suggestions will appear here -->
                 </div>
                 <div class="chat-messages" id="chat-messages">
                 </div>
@@ -161,7 +175,8 @@
                 </div>
             </div>
 
-            <input type="file" id="file-input" multiple style="display: none;">
+            <input type="file" id="file-input" multiple accept=".pdf,.txt,.md,.docx,.doc,.jpg,.jpeg,.png"
+                style="display: none;">
 
             <div class="language-selector-inline">
                 <label for="upload-languages">Language:</label>
@@ -203,15 +218,36 @@
         const generateAudioBtn = document.getElementById('generate-audio-btn');
         const languageSelector = document.getElementById('languages');
         const uploadLanguageSelector = document.getElementById('upload-languages');
+        const suggestionsContainer = document.getElementById('suggestions-container');
         let sources = [];
         let chatEnabled = false;
         let currentText = '';
         let currentSummary = '';
-        const API_BASE_URL = 'http://localhost:5000';
+        let conversationHistory = [];
+
+        // Helper function for authenticated fetch - always use relative URLs + credentials
+        function authFetch(url, options = {}) {
+            options.credentials = 'same-origin';
+            // Strip absolute base if accidentally passed
+            url = url.replace(/^https?:\/\/[^\/]+/, '');
+            return fetch(url, options).then(response => {
+                if (response.status === 401 || response.redirected) {
+                    window.location.href = '/login';
+                    return Promise.reject('Redirected to login');
+                }
+                return response;
+            });
+        }
+        const API_BASE_URL = '';
         uploadSourceBtn.addEventListener('click', showUploadView);
         uploadSourceBtn2.addEventListener('click', showUploadView);
         closeUploadBtn.addEventListener('click', hideUploadView);
-        fileSelectBtn.addEventListener('click', () => fileInput.click());
+
+        // Optimize file input - trigger immediately
+        fileSelectBtn.addEventListener('click', () => {
+            fileInput.click();
+        });
+
         fileInput.addEventListener('change', handleFileUpload);
         sendMessageBtn.addEventListener('click', sendMessage);
         chatInput.addEventListener('keypress', (e) => {
@@ -229,7 +265,7 @@
                 showLoadingDialog('Translating to new language...');
 
                 // Re-generate summary in new language
-                fetch(`${API_BASE_URL}/generate_summary`, {
+                authFetch(`${API_BASE_URL}/generate_summary`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -303,6 +339,7 @@
 
                     fetch(`${API_BASE_URL}/ask_question`, {
                         method: 'POST',
+                        credentials: 'same-origin',
                         headers: {
                             'Content-Type': 'application/json'
                         },
@@ -313,7 +350,10 @@
                             language: language
                         })
                     })
-                        .then(response => response.json())
+                        .then(response => {
+                            if (response.status === 401 || response.redirected) { window.location.href = '/login'; return Promise.reject(); }
+                            return response.json();
+                        })
                         .then(data => {
                             closeLoadingDialog();
                             if (data.success) {
@@ -436,25 +476,20 @@
             });
         });
         function showUploadView() {
-            mainContent.style.opacity = '0';
-            header.style.opacity = '0';
-            setTimeout(() => {
-                mainContent.style.display = 'none';
-                header.style.display = 'none';
-                uploadView.classList.add('active');
-            }, 300);
+            uploadView.classList.add('active');
+            document.body.style.overflow = 'hidden'; // Prevent background scrolling
         }
         function hideUploadView() {
             uploadView.classList.remove('active');
-            setTimeout(() => {
-                mainContent.style.display = 'flex';
-                header.style.display = 'flex';
-                setTimeout(() => {
-                    mainContent.style.opacity = '1';
-                    header.style.opacity = '1';
-                }, 50);
-            }, 300);
+            document.body.style.overflow = 'auto'; // Re-enable scrolling
         }
+
+        // Close modal when clicking outside the upload container
+        uploadView.addEventListener('click', function (e) {
+            if (e.target === uploadView) {
+                hideUploadView();
+            }
+        });
         function handleFileUpload(e) {
             const files = e.target.files;
             handleFiles(files);
@@ -471,24 +506,31 @@
             const formData = new FormData();
             formData.append('file', file);
             formData.append('language', uploadLanguageSelector.value);
-            showToast('Uploading and processing file...');
-            fetch(`${API_BASE_URL}/upload`, {
+
+            // Show immediate feedback
+            showLoadingDialog('Processing file...');
+            hideUploadView();
+
+            authFetch(`${API_BASE_URL}/upload`, {
                 method: 'POST',
                 body: formData
             })
                 .then(response => response.json())
                 .then(data => {
+                    closeLoadingDialog();
                     if (data.success) {
                         addSource(file.name, file.type, data.text, data.summary);
-                        showToast('File processed successfully');
-                        hideUploadView();
+                        showToast('✓ File processed successfully');
                     } else {
                         showToast('Error: ' + data.error);
                     }
                 })
                 .catch(error => {
-                    console.error('Error:', error);
-                    showToast('Error uploading file');
+                    closeLoadingDialog();
+                    if (error !== 'Redirected to login') {
+                        console.error('Error:', error);
+                        showToast('Error uploading file');
+                    }
                 });
         }
         function summarizeURL(url) {
@@ -496,13 +538,21 @@
             showToast('Processing URL...');
             fetch(`${API_BASE_URL}/summarize_url`, {
                 method: 'POST',
+                credentials: 'same-origin',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ url, language })
             })
-                .then(response => response.json())
+                .then(response => {
+                    if (response.status === 401 || response.redirected) {
+                        window.location.href = '/login';
+                        return;
+                    }
+                    return response.json();
+                })
                 .then(data => {
+                    if (!data) return;
                     if (data.success) {
                         addSource(url, 'website', data.text, data.summary);
                         showToast('URL processed successfully');
@@ -522,13 +572,21 @@
             showToast('Processing text...');
             fetch(`${API_BASE_URL}/generate_summary`, {
                 method: 'POST',
+                credentials: 'same-origin',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ text, language })
             })
-                .then(response => response.json())
+                .then(response => {
+                    if (response.status === 401 || response.redirected) {
+                        window.location.href = '/login';
+                        return;
+                    }
+                    return response.json();
+                })
                 .then(data => {
+                    if (!data) return;
                     if (data.success) {
                         addSource('Pasted Text', 'text', text, data.summary);
                         showToast('Text processed successfully');
@@ -588,10 +646,67 @@
             summaryContent.textContent = summary;
             summaryContainer.style.display = 'block';
             chatPlaceholder.style.display = 'none';
+            // Generate initial suggestions based on summary
+            generateSuggestions();
         }
         function hideSummary() {
             summaryContainer.style.display = 'none';
             chatPlaceholder.style.display = 'block';
+            suggestionsContainer.classList.remove('show');
+        }
+
+        // Generate smart suggestions based on summary and conversation
+        function generateSuggestions() {
+            const suggestions = [];
+
+            if (conversationHistory.length === 0) {
+                // Initial suggestions after summary
+                suggestions.push('Give me a simple conclusion');
+                suggestions.push('What are the key points?');
+                suggestions.push('Explain this in simpler terms');
+                suggestions.push('What are the main takeaways?');
+            } else {
+                // Dynamic suggestions based on conversation
+                const lastQuestion = conversationHistory[conversationHistory.length - 1]?.question || '';
+
+                if (lastQuestion.toLowerCase().includes('key') || lastQuestion.toLowerCase().includes('point')) {
+                    suggestions.push('Tell me more details');
+                    suggestions.push('Give examples');
+                    suggestions.push('What else is important?');
+                } else if (lastQuestion.toLowerCase().includes('explain') || lastQuestion.toLowerCase().includes('what')) {
+                    suggestions.push('Can you simplify that?');
+                    suggestions.push('Give me an example');
+                    suggestions.push('What does this mean?');
+                } else {
+                    suggestions.push('Summarize this briefly');
+                    suggestions.push('What are the implications?');
+                    suggestions.push('Tell me more');
+                }
+
+                suggestions.push('Start over with new question');
+            }
+
+            displaySuggestions(suggestions);
+        }
+
+        // Display suggestion chips
+        function displaySuggestions(suggestions) {
+            suggestionsContainer.innerHTML = '';
+
+            suggestions.forEach(suggestion => {
+                const chip = document.createElement('div');
+                chip.className = 'suggestion-chip';
+                chip.textContent = suggestion;
+                chip.addEventListener('click', () => {
+                    chatInput.value = suggestion;
+                    chatInput.focus();
+                    // Auto-send the suggestion
+                    setTimeout(() => sendMessage(), 100);
+                });
+                suggestionsContainer.appendChild(chip);
+            });
+
+            suggestionsContainer.classList.add('show');
         }
         function enableChat() {
             chatEnabled = true;
@@ -614,8 +729,12 @@
             const question = chatInput.value.trim();
             chatInput.value = '';
             addMessage(question, 'user');
+
+            // Store in conversation history
+            conversationHistory.push({ question, answer: null });
+
             const language = languageSelector.value;
-            fetch(`${API_BASE_URL}/ask_question`, {
+            authFetch(`${API_BASE_URL}/ask_question`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -631,6 +750,10 @@
                 .then(data => {
                     if (data.success) {
                         addMessage(data.answer, 'ai');
+                        // Update conversation history with answer
+                        conversationHistory[conversationHistory.length - 1].answer = data.answer;
+                        // Generate new suggestions based on this Q&A
+                        generateSuggestions();
                     } else {
                         addMessage('Error: ' + data.error, 'ai');
                     }
@@ -648,7 +771,13 @@
             messageDiv.className = `message ${sender}-message`;
             messageDiv.textContent = text;
             chatMessages.appendChild(messageDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+            // Smooth scroll with requestAnimationFrame for better performance
+            requestAnimationFrame(() => {
+                chatMessages.scrollTo({
+                    top: chatMessages.scrollHeight,
+                    behavior: 'smooth'
+                });
+            });
         }
         function downloadSummary() {
             if (!currentSummary) {
@@ -708,7 +837,7 @@
         function performDownload(format) {
             showToast(`Generating ${format.toUpperCase()} file...`);
 
-            fetch(`${API_BASE_URL}/download_summary`, {
+            authFetch(`${API_BASE_URL}/download_summary`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -750,7 +879,7 @@
         function generateStudioVideo(text, language) {
             showToast('Generating video overview...');
 
-            fetch(`${API_BASE_URL}/studio/video`, {
+            authFetch(`${API_BASE_URL}/studio/video`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -776,7 +905,7 @@
         function generateStudioMindmap(text) {
             showToast('Generating mind map...');
 
-            fetch(`${API_BASE_URL}/studio/mindmap`, {
+            authFetch(`${API_BASE_URL}/studio/mindmap`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -802,7 +931,7 @@
         function generateStudioAudio(text, language) {
             showToast('Generating audio overview...');
 
-            fetch(`${API_BASE_URL}/studio/audio`, {
+            authFetch(`${API_BASE_URL}/studio/audio`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -975,7 +1104,7 @@
         function generateStudioReport(text, language) {
             showToast('Generating report...');
 
-            fetch(`${API_BASE_URL}/studio/report`, {
+            authFetch(`${API_BASE_URL}/studio/report`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -1268,7 +1397,7 @@
 
             showToast('Generating PDF...');
 
-            fetch(`${API_BASE_URL}/download_report_pdf`, {
+            authFetch(`${API_BASE_URL}/download_report_pdf`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'

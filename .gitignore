@@ -31,6 +31,12 @@ env/
 # Environment Variables
 .env
 
+# Database
+*.db
+*.sqlite
+*.sqlite3
+users.db
+
 # IDE
 .vscode/
 .idea/

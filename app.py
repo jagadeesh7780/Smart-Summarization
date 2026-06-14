@@ -1,5 +1,8 @@
-from flask import Flask, render_template, request, jsonify, send_file
+from flask import Flask, render_template, request, jsonify, send_file, redirect, url_for, session
 from flask_cors import CORS
+from flask_sqlalchemy import SQLAlchemy
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from werkzeug.security import generate_password_hash, check_password_hash
 import os
 import shutil
 import pytesseract
@@ -31,6 +34,13 @@ from dotenv import load_dotenv
 import glob
 from datetime import datetime, timedelta
 from groq import Groq
+import secrets
+import hashlib
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from functools import wraps
+from collections import defaultdict
 
 load_dotenv()
 if os.getenv('GEMINI_API_KEY'):
@@ -38,8 +48,57 @@ if os.getenv('GEMINI_API_KEY'):
 
 app = Flask(__name__)
 CORS(app)
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-change-this-in-production')
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = 'Uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SECURE'] = False  # Set to True in production with HTTPS
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+
+# Initialize extensions
+db = SQLAlchemy(app)
+login_manager = LoginManager(app)
+login_manager.login_view = 'login_page'
+
+@login_manager.unauthorized_handler
+def unauthorized():
+    # Return JSON for API/AJAX requests, redirect for page requests
+    if request.is_json or request.headers.get('Content-Type') == 'application/json' or \
+       request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'error': 'Authentication required', 'redirect': '/login'}), 401
+    return redirect(url_for('login_page'))
+
+# User Model
+class User(UserMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password = db.Column(db.String(200), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+# OTP Model for password reset
+class PasswordResetOTP(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(120), nullable=False)
+    otp_hash = db.Column(db.String(200), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    expires_at = db.Column(db.DateTime, nullable=False)
+    is_used = db.Column(db.Boolean, default=False)
+    
+# Rate limiting storage
+otp_request_tracker = defaultdict(list)  # email -> [timestamps]
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
+# Create database tables
+with app.app_context():
+    db.create_all()
+
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
 if not os.path.exists('static'):
@@ -47,7 +106,6 @@ if not os.path.exists('static'):
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
 # Cleanup old files in static folder
 def cleanup_old_files():
     try:
@@ -191,7 +249,7 @@ def generate_gemini_summary(text, language='en'):
         
         language_name = language_names.get(language.lower(), 'English')
         
-        # Try Groq first (faster and you have the key!)
+        # Try Groq first (FASTEST!)
         groq_api_key = os.getenv('GROQ_API_KEY')
         if groq_api_key:
             try:
@@ -200,25 +258,13 @@ def generate_gemini_summary(text, language='en'):
                 chat_completion = client.chat.completions.create(
                     messages=[
                         {
-                            "role": "system",
-                            "content": f"You are a professional summarizer. IMPORTANT: Write all summaries in {language_name} language only. Never use English or any other language unless {language_name} is English."
-                        },
-                        {
                             "role": "user",
-                            "content": f"""Please provide a comprehensive summary of the following text.
-
-CRITICAL INSTRUCTION: Write the ENTIRE summary in {language_name} language.
-
-Text to summarize:
-{text[:3000]}
-
-Summary in {language_name}:""",
+                            "content": f"Summarize in {language_name}:\n{text[:1000]}",
                         }
                     ],
                     model="llama-3.1-8b-instant",
-                    temperature=0.3,
-                    max_tokens=800,
-                    top_p=1,
+                    temperature=0.1,
+                    max_tokens=200,  # Very short
                     stream=False,
                 )
                 
@@ -291,18 +337,13 @@ def generate_gemini_answer(text, question, language='en', summary=None):
                 chat_completion = client.chat.completions.create(
                     messages=[
                         {
-                            "role": "system",
-                            "content": f"You are a helpful AI assistant. IMPORTANT: Answer all questions in {language_name} language only. Do not use English or any other language."
-                        },
-                        {
                             "role": "user",
-                            "content": f"Context: {context}\n\nQuestion: {question}\n\nProvide a concise answer in {language_name}:",
+                            "content": f"{context[:500]}\n\nQ: {question}\nA:",
                         }
                     ],
-                    model="llama-3.1-8b-instant",  # Fastest model
-                    temperature=0.2,  # Even lower for faster responses
-                    max_tokens=300,  # Reduced further for speed
-                    top_p=0.9,
+                    model="llama-3.1-8b-instant",
+                    temperature=0.1,
+                    max_tokens=100,  # Very short
                     stream=False,
                 )
                 
@@ -342,6 +383,8 @@ def generate_mind_map(text):
             logger.error("No text provided for mind map")
             return None
         
+        concepts = None
+
         # Use Groq first for faster concept extraction
         groq_api_key = os.getenv('GROQ_API_KEY')
         if groq_api_key:
@@ -350,37 +393,55 @@ def generate_mind_map(text):
                 chat_completion = client.chat.completions.create(
                     messages=[
                         {
-                            "role": "system",
-                            "content": "Extract key concepts as comma-separated list. Be concise."
-                        },
-                        {
                             "role": "user",
-                            "content": f"Extract 6-8 key concepts from this text as comma-separated list:\n\n{text[:800]}\n\nConcepts:",
+                            "content": f"Extract exactly 6 key concepts from this text as a comma-separated list. Only return the concepts, nothing else:\n{text[:600]}",
                         }
                     ],
                     model="llama-3.1-8b-instant",
-                    temperature=0.2,
-                    max_tokens=100,  # Very short for speed
+                    temperature=0.1,
+                    max_tokens=60,
                 )
-                concepts = [c.strip() for c in chat_completion.choices[0].message.content.split(',') if c.strip()][:8]
+                raw = chat_completion.choices[0].message.content
+                concepts = [c.strip() for c in raw.split(',') if c.strip()][:6]
             except Exception as e:
                 logger.error(f"Groq error in mind map: {e}")
                 concepts = None
-        elif os.getenv('GEMINI_API_KEY'):
-            model = genai.GenerativeModel('gemini-1.5-flash')
-            prompt = f"Extract exactly 6-8 key concepts from this text as a comma-separated list. Only return the concepts, nothing else: {text[:1000]}"
-            response = model.generate_content(prompt)
-            concepts = [c.strip() for c in response.text.split(',') if c.strip()][:8]
-        else:
-            # Fallback: create simple mind map from text
-            words = text.split()[:50]
-            concepts = [' '.join(words[i:i+3]) for i in range(0, min(30, len(words)), 5)][:6]
-        
+
+        if not concepts and os.getenv('GEMINI_API_KEY'):
+            try:
+                model = genai.GenerativeModel('gemini-1.5-flash')
+                prompt = f"Extract exactly 6-8 key concepts from this text as a comma-separated list. Only return the concepts, nothing else: {text[:1000]}"
+                response = model.generate_content(prompt)
+                concepts = [c.strip() for c in response.text.split(',') if c.strip()][:8]
+            except Exception as e:
+                logger.error(f"Gemini error in mind map: {e}")
+                concepts = None
+
+        # Robust fallback — extract meaningful phrases from the text
         if not concepts or len(concepts) < 2:
-            logger.error("Not enough concepts extracted for mind map")
-            return None
+            # Split into sentences, pick first word(s) of each as concept
+            import re
+            sentences = re.split(r'[.!?;]', text)
+            concepts = []
+            for s in sentences:
+                words = s.strip().split()
+                if len(words) >= 2:
+                    concepts.append(' '.join(words[:3]))
+                if len(concepts) >= 6:
+                    break
+            # If still not enough, just use individual significant words
+            if len(concepts) < 2:
+                words = [w for w in text.split() if len(w) > 4][:12]
+                concepts = list(dict.fromkeys(words))[:6]  # deduplicate
+
+        # Ensure we have at least 2 concepts
+        if len(concepts) < 2:
+            concepts = ['Main Topic', 'Key Concept', 'Supporting Idea']
+
+        # Truncate long concept strings
+        concepts = [c[:30] for c in concepts[:7]]
         
-        # Create hierarchical mind map (optimized - fewer iterations)
+        # Create hierarchical mind map
         G = nx.DiGraph()
         main_topic = concepts[0]
         G.add_node(main_topic)
@@ -393,25 +454,22 @@ def generate_mind_map(text):
                 parent = concepts[((i-1) % 3) + 1]
                 G.add_edge(parent, concept)
         
-        plt.figure(figsize=(10, 7), facecolor='white')  # Smaller for speed
-        pos = nx.spring_layout(G, k=2, iterations=30)  # Reduced iterations for speed
+        plt.figure(figsize=(8, 6), facecolor='white', dpi=80)
+        pos = nx.spring_layout(G, k=2.5, iterations=20, seed=42)
         
-        # Draw nodes with different colors
         node_colors = ['#4e7ae7' if node == main_topic else '#7a4ee7' for node in G.nodes()]
-        nx.draw_networkx_nodes(G, pos, node_color=node_colors, node_size=3000, alpha=0.9)
-        nx.draw_networkx_edges(G, pos, edge_color='#cccccc', arrows=True, arrowsize=20, width=2)
-        nx.draw_networkx_labels(G, pos, font_size=9, font_weight='bold', font_color='white')
+        nx.draw_networkx_nodes(G, pos, node_color=node_colors, node_size=2500, alpha=0.92)
+        nx.draw_networkx_edges(G, pos, edge_color='#aaaacc', arrows=True, arrowsize=15, width=1.5)
+        nx.draw_networkx_labels(G, pos, font_size=7, font_weight='bold', font_color='white')
         
         plt.axis('off')
-        plt.tight_layout()
+        plt.tight_layout(pad=0.5)
         
-        # Save to memory buffer (reduced DPI for speed)
         img_buffer = io.BytesIO()
-        plt.savefig(img_buffer, format='png', dpi=100, bbox_inches='tight', facecolor='white')  # Reduced DPI for speed
+        plt.savefig(img_buffer, format='png', dpi=80, bbox_inches='tight', facecolor='white')
         img_buffer.seek(0)
         plt.close()
         
-        # Return base64 encoded image
         img_base64 = base64.b64encode(img_buffer.getvalue()).decode('utf-8')
         return img_base64
     except Exception as e:
@@ -494,20 +552,16 @@ def generate_video_overview(text, language='en'):
                 chat_completion = client.chat.completions.create(
                     messages=[
                         {
-                            "role": "system",
-                            "content": f"You are a content analyzer. Extract key points in {language_name} language only."
-                        },
-                        {
                             "role": "user",
-                            "content": f"Extract 5 key points from this text. Write each point in {language_name} language:\n\n{text[:2000]}\n\nKey points in {language_name}:",
+                            "content": f"3 points:\n{text[:600]}",
                         }
                     ],
                     model="llama-3.1-8b-instant",
-                    temperature=0.3,
-                    max_tokens=400,
+                    temperature=0.1,
+                    max_tokens=100,
                 )
                 response_text = chat_completion.choices[0].message.content
-                key_points = [line.strip() for line in response_text.split('\n') if line.strip() and len(line.strip()) > 5][:5]
+                key_points = [line.strip() for line in response_text.split('\n') if line.strip() and len(line.strip()) > 3][:3]
             except Exception as e:
                 logger.error(f"Groq error in video generation: {e}")
                 key_points = text.split('.')[:5]
@@ -520,29 +574,25 @@ def generate_video_overview(text, language='en'):
             sentences = text.split('.')[:5]
             key_points = [s.strip() for s in sentences if s.strip()]
         
-        # Create video-like visualization (optimized for speed)
-        fig, ax = plt.subplots(figsize=(10, 7), facecolor='#1a1a2e')  # Smaller for speed
+        fig, ax = plt.subplots(figsize=(6, 5), facecolor='#1a1a2e', dpi=60)
         ax.set_xlim(0, 10)
         ax.set_ylim(0, 10)
         ax.axis('off')
         
-        # Title
-        ax.text(5, 8.5, 'Video Overview', fontsize=22, weight='bold', 
+        ax.text(5, 8.5, 'Video Overview', fontsize=16, weight='bold', 
                 color='white', ha='center', va='center')
         
-        # Key points
         y_position = 7
-        for i, point in enumerate(key_points[:5], 1):
-            point_text = point[:80] + '...' if len(point) > 80 else point
-            ax.text(5, y_position, f"{i}. {point_text}", fontsize=11, 
-                   color='#e0e0e0', ha='center', va='center', wrap=True)
-            y_position -= 1.2
+        for i, point in enumerate(key_points[:3], 1):
+            point_text = point[:60] + '...' if len(point) > 60 else point
+            ax.text(5, y_position, f"{i}. {point_text}", fontsize=9, 
+                   color='#e0e0e0', ha='center', va='center')
+            y_position -= 1.5
         
-        plt.tight_layout()
+        plt.tight_layout(pad=0)
         
-        # Save to memory buffer (reduced DPI for speed)
         img_buffer = io.BytesIO()
-        plt.savefig(img_buffer, format='png', dpi=100, bbox_inches='tight', facecolor='#1a1a2e')  # Reduced DPI
+        plt.savefig(img_buffer, format='png', dpi=60, bbox_inches='tight', facecolor='#1a1a2e')
         img_buffer.seek(0)
         plt.close()
         
@@ -582,22 +632,13 @@ def generate_report_document(text, language='en'):
                 chat_completion = client.chat.completions.create(
                     messages=[
                         {
-                            "role": "system",
-                            "content": f"Generate structured reports in {language_name}. Return valid JSON only."
-                        },
-                        {
                             "role": "user",
-                            "content": f"""Create a report in {language_name} from this text. Return ONLY valid JSON with these keys:
-{{"title": "concise title", "introduction": "2 sentences", "key_points": ["point1", "point2", "point3", "point4", "point5"], "conclusion": "2 sentences"}}
-
-Text: {text[:1500]}
-
-JSON:""",
+                            "content": f"JSON report:\n{text[:600]}\n{{\"title\":\"...\",\"intro\":\"...\",\"points\":[\"...\"],\"conclusion\":\"...\"}}",
                         }
                     ],
                     model="llama-3.1-8b-instant",
-                    temperature=0.2,
-                    max_tokens=500,
+                    temperature=0.1,
+                    max_tokens=150,
                 )
                 report_data = json.loads(chat_completion.choices[0].message.content.strip())
             except Exception as e:
@@ -720,20 +761,310 @@ def download_report_pdf(text, report_data):
 @app.route('/')
 def index():
     try:
-        return render_template('index.html')
+        return render_template('index.html', current_user=current_user)
     except Exception as e:
         logger.error(f"Error rendering index.html: {e}")
         return jsonify({'error': 'Template not found or server error'}), 500
 
+@app.route('/login')
+def login_page():
+    if current_user.is_authenticated:
+        return redirect(url_for('next_page'))
+    return render_template('login.html')
+
+@app.route('/login', methods=['POST'])
+def login():
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        password = data.get('password')
+        
+        user = User.query.filter_by(email=email).first()
+        
+        if user and check_password_hash(user.password, password):
+            login_user(user, remember=True, duration=timedelta(days=7))
+            session.permanent = True
+            return jsonify({'success': True, 'message': 'Login successful'})
+        else:
+            return jsonify({'success': False, 'message': 'Invalid email or password'})
+    except Exception as e:
+        logger.error(f"Login error: {e}")
+        return jsonify({'success': False, 'message': 'Server error'}), 500
+
+@app.route('/signup', methods=['POST'])
+def signup():
+    try:
+        data = request.get_json()
+        name = data.get('name')
+        email = data.get('email')
+        password = data.get('password')
+        
+        # Check if user already exists
+        if User.query.filter_by(email=email).first():
+            return jsonify({'success': False, 'message': 'Email already registered'})
+        
+        # Create new user
+        hashed_password = generate_password_hash(password)
+        new_user = User(name=name, email=email, password=hashed_password)
+        db.session.add(new_user)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Account created successfully'})
+    except Exception as e:
+        logger.error(f"Signup error: {e}")
+        return jsonify({'success': False, 'message': 'Server error'}), 500
+
+# Email sending function
+def send_otp_email(email, otp):
+    try:
+        smtp_server = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
+        smtp_port = int(os.getenv('SMTP_PORT', 587))
+        smtp_email = os.getenv('SMTP_EMAIL')
+        smtp_password = os.getenv('SMTP_PASSWORD')
+        
+        if not smtp_email or not smtp_password:
+            logger.warning("SMTP not configured - OTP will be logged to console")
+            logger.info(f"=== OTP FOR {email}: {otp} ===")
+            print(f"\n{'='*50}")
+            print(f"OTP FOR {email}: {otp}")
+            print(f"{'='*50}\n")
+            return True  # Return True for testing without email
+        
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = 'Password Reset OTP - Smart Summarizer'
+        msg['From'] = smtp_email
+        msg['To'] = email
+        
+        html = f"""
+        <html>
+          <body style="font-family: Arial, sans-serif; padding: 20px; background-color: #f5f5f5;">
+            <div style="max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+              <h2 style="color: #667eea; margin-bottom: 20px;">Password Reset Request</h2>
+              <p style="color: #333; font-size: 16px; line-height: 1.6;">
+                You requested to reset your password. Use the OTP below to proceed:
+              </p>
+              <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-size: 32px; font-weight: bold; text-align: center; padding: 20px; border-radius: 8px; margin: 30px 0; letter-spacing: 8px;">
+                {otp}
+              </div>
+              <p style="color: #666; font-size: 14px;">
+                This OTP will expire in <strong>5 minutes</strong>.
+              </p>
+              <p style="color: #666; font-size: 14px;">
+                If you didn't request this, please ignore this email.
+              </p>
+              <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+              <p style="color: #999; font-size: 12px; text-align: center;">
+                Smart Summarizer - Secure Password Reset
+              </p>
+            </div>
+          </body>
+        </html>
+        """
+        
+        part = MIMEText(html, 'html')
+        msg.attach(part)
+        
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls()
+            server.login(smtp_email, smtp_password)
+            server.send_message(msg)
+        
+        logger.info(f"OTP email sent to {email}")
+        return True
+    except Exception as e:
+        logger.error(f"Email sending error: {e}")
+        # Still log OTP for testing
+        logger.info(f"=== OTP FOR {email}: {otp} ===")
+        print(f"\n{'='*50}")
+        print(f"OTP FOR {email}: {otp}")
+        print(f"{'='*50}\n")
+        return True  # Return True to allow testing without email
+
+# Rate limiting check
+def check_otp_rate_limit(email):
+    now = datetime.utcnow()
+    one_hour_ago = now - timedelta(hours=1)
+    
+    # Clean old requests
+    otp_request_tracker[email] = [
+        ts for ts in otp_request_tracker[email] 
+        if ts > one_hour_ago
+    ]
+    
+    # Check if limit exceeded
+    if len(otp_request_tracker[email]) >= 3:
+        return False
+    
+    return True
+
+@app.route('/forgot-password/send-otp', methods=['POST'])
+def send_otp():
+    try:
+        data = request.get_json()
+        email = data.get('email', '').strip().lower()
+        
+        if not email:
+            return jsonify({'success': False, 'message': 'Email is required'}), 400
+        
+        # Check if user exists
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            return jsonify({'success': False, 'message': 'Email not found'}), 404
+        
+        # Check rate limit
+        if not check_otp_rate_limit(email):
+            return jsonify({'success': False, 'message': 'Too many OTP requests. Please try again after 1 hour.'}), 429
+        
+        # Generate 6-digit OTP
+        otp = ''.join([str(secrets.randbelow(10)) for _ in range(6)])
+        
+        # Hash OTP before storing
+        otp_hash = hashlib.sha256(otp.encode()).hexdigest()
+        
+        # Store OTP in database
+        expires_at = datetime.utcnow() + timedelta(minutes=5)
+        new_otp = PasswordResetOTP(
+            email=email,
+            otp_hash=otp_hash,
+            expires_at=expires_at
+        )
+        db.session.add(new_otp)
+        db.session.commit()
+        
+        # Track request
+        otp_request_tracker[email].append(datetime.utcnow())
+        
+        # Send OTP via email (or log to console if SMTP not configured)
+        smtp_configured = os.getenv('SMTP_EMAIL') and os.getenv('SMTP_PASSWORD')
+        
+        if send_otp_email(email, otp):
+            if smtp_configured:
+                message = 'OTP sent to your email'
+            else:
+                message = f'SMTP not configured. Check console for OTP: {otp}'
+            
+            return jsonify({
+                'success': True, 
+                'message': message,
+                'otp_for_testing': otp if not smtp_configured else None,
+                'expires_in': 300  # 5 minutes in seconds
+            })
+        else:
+            return jsonify({'success': False, 'message': 'Failed to send OTP'}), 500
+            
+    except Exception as e:
+        logger.error(f"Send OTP error: {e}")
+        return jsonify({'success': False, 'message': 'Server error'}), 500
+
+@app.route('/forgot-password/verify-otp', methods=['POST'])
+def verify_otp():
+    try:
+        data = request.get_json()
+        email = data.get('email', '').strip().lower()
+        otp = data.get('otp', '').strip()
+        
+        if not email or not otp:
+            return jsonify({'success': False, 'message': 'Email and OTP are required'}), 400
+        
+        # Hash the provided OTP
+        otp_hash = hashlib.sha256(otp.encode()).hexdigest()
+        
+        # Find valid OTP
+        otp_record = PasswordResetOTP.query.filter_by(
+            email=email,
+            otp_hash=otp_hash,
+            is_used=False
+        ).first()
+        
+        if not otp_record:
+            return jsonify({'success': False, 'message': 'Invalid OTP'}), 400
+        
+        # Check if expired
+        if datetime.utcnow() > otp_record.expires_at:
+            return jsonify({'success': False, 'message': 'OTP has expired'}), 400
+        
+        # Mark OTP as used
+        otp_record.is_used = True
+        db.session.commit()
+        
+        # Generate temporary token for password reset
+        reset_token = secrets.token_urlsafe(32)
+        session[f'reset_token_{email}'] = {
+            'token': reset_token,
+            'expires': (datetime.utcnow() + timedelta(minutes=10)).isoformat()
+        }
+        
+        return jsonify({
+            'success': True, 
+            'message': 'OTP verified successfully',
+            'reset_token': reset_token
+        })
+        
+    except Exception as e:
+        logger.error(f"Verify OTP error: {e}")
+        return jsonify({'success': False, 'message': 'Server error'}), 500
+
+@app.route('/forgot-password/reset-password', methods=['POST'])
+def reset_password():
+    try:
+        data = request.get_json()
+        email = data.get('email', '').strip().lower()
+        reset_token = data.get('reset_token', '')
+        new_password = data.get('new_password', '')
+        
+        if not email or not reset_token or not new_password:
+            return jsonify({'success': False, 'message': 'All fields are required'}), 400
+        
+        # Validate password strength
+        if len(new_password) < 6:
+            return jsonify({'success': False, 'message': 'Password must be at least 6 characters'}), 400
+        
+        # Verify reset token
+        session_data = session.get(f'reset_token_{email}')
+        if not session_data or session_data['token'] != reset_token:
+            return jsonify({'success': False, 'message': 'Invalid reset token'}), 400
+        
+        # Check token expiry
+        if datetime.utcnow() > datetime.fromisoformat(session_data['expires']):
+            return jsonify({'success': False, 'message': 'Reset token has expired'}), 400
+        
+        # Update password
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            return jsonify({'success': False, 'message': 'User not found'}), 404
+        
+        user.password = generate_password_hash(new_password)
+        db.session.commit()
+        
+        # Clear session
+        session.pop(f'reset_token_{email}', None)
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Password reset successfully'
+        })
+        
+    except Exception as e:
+        logger.error(f"Reset password error: {e}")
+        return jsonify({'success': False, 'message': 'Server error'}), 500
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('index'))
+
 @app.route('/next')
+@login_required
 def next_page():
     try:
-        return render_template('next.html')
+        return render_template('next.html', current_user=current_user)
     except Exception as e:
         logger.error(f"Error rendering next.html: {e}")
         return jsonify({'error': 'Template not found or server error'}), 500
 
 @app.route('/upload', methods=['POST'])
+@login_required
 def upload_file():
     try:
         if 'file' not in request.files:
@@ -749,30 +1080,45 @@ def upload_file():
             return jsonify({'error': 'No file selected'}), 400
         filename = secure_filename(file.filename)
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        
+        # Save file with immediate feedback
         try:
             file.save(file_path)
         except Exception as e:
             logger.error(f"Error saving file {filename}: {e}")
             return jsonify({'error': 'Failed to save file'}), 500
+        
         file_type = filename.split('.')[-1].lower()
+        
+        # Extract text (optimized - limit text size for faster processing)
         text = extract_text_from_file(file_path, file_type, language)
+        
+        # Clean up file immediately
         try:
             os.remove(file_path)
         except Exception as e:
             logger.warning(f"Error removing file {file_path}: {e}")
+        
         if not text:
             logger.error(f"No text extracted from {filename}")
             return jsonify({'error': f"Failed to extract text from {filename}. File may be empty, corrupted, or not supported."}), 400
-        summary = generate_gemini_summary(text, language)
+        
+        # Limit text for faster processing (first 5000 chars for summary)
+        text_for_summary = text[:5000] if len(text) > 5000 else text
+        
+        # Generate summary with optimized text
+        summary = generate_gemini_summary(text_for_summary, language)
         if not summary:
             logger.error(f"No summary generated for {filename}")
             return jsonify({'error': 'Failed to generate summary'}), 400
+        
         return jsonify({'success': True, 'text': text, 'summary': summary})
     except Exception as e:
         logger.error(f"Upload endpoint error: {e}")
         return jsonify({'error': f"Server error during file upload: {str(e)}"}), 500
 
 @app.route('/summarize_url', methods=['POST'])
+@login_required
 def summarize_url():
     try:
         data = request.get_json()
@@ -808,6 +1154,7 @@ def summarize_url():
         return jsonify({'error': f"Server error during URL processing: {str(e)}"}), 500
 
 @app.route('/generate_summary', methods=['POST'])
+@login_required
 def generate_summary():
     try:
         data = request.get_json()
@@ -826,6 +1173,7 @@ def generate_summary():
         return jsonify({'error': f"Server error during summary generation: {str(e)}"}), 500
 
 @app.route('/ask_question', methods=['POST'])
+@login_required
 def ask_question():
     try:
         data = request.get_json()
@@ -846,6 +1194,7 @@ def ask_question():
         return jsonify({'error': f"Server error during question answering: {str(e)}"}), 500
 
 @app.route('/generate_mindmap', methods=['POST'])
+@login_required
 def generate_mindmap():
     try:
         data = request.get_json()
@@ -867,6 +1216,7 @@ def generate_mindmap():
         return jsonify({'error': f"Server error during mind map generation: {str(e)}"}), 500
 
 @app.route('/studio/audio', methods=['POST'])
+@login_required
 def studio_audio():
     try:
         data = request.get_json()
@@ -880,6 +1230,7 @@ def studio_audio():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/studio/video', methods=['POST'])
+@login_required
 def studio_video():
     try:
         data = request.get_json()
@@ -893,6 +1244,7 @@ def studio_video():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/studio/mindmap', methods=['POST'])
+@login_required
 def studio_mindmap():
     try:
         data = request.get_json()
@@ -913,6 +1265,7 @@ def studio_mindmap():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/studio/report', methods=['POST'])
+@login_required
 def studio_report():
     try:
         data = request.get_json()
@@ -926,6 +1279,7 @@ def studio_report():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/download_report_pdf', methods=['POST'])
+@login_required
 def download_report_pdf_endpoint():
     try:
         data = request.get_json()
@@ -942,6 +1296,7 @@ def download_report_pdf_endpoint():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/download_summary', methods=['POST'])
+@login_required
 def download_summary_endpoint():
     try:
         data = request.get_json()

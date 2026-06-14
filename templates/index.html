@@ -1,17 +1,21 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Smart Summarizer - AI-Powered Research Assistant</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Open+Sans:wght@300;400;600&display=swap"
+        rel="stylesheet">
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
+
         body {
             font-family: 'Open Sans', sans-serif;
             background: #000000;
@@ -20,11 +24,13 @@
             overflow-x: hidden;
             min-height: 100vh;
         }
+
         .container {
             max-width: 1200px;
             margin: 0 auto;
             padding: 0 20px;
         }
+
         header {
             background: rgba(0, 0, 0, 0.9);
             box-shadow: 0 4px 20px rgba(255, 255, 255, 0.05);
@@ -35,11 +41,13 @@
             padding: 15px 0;
             border-bottom: 1px solid #333;
         }
+
         .header-content {
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
+
         .logo {
             display: flex;
             align-items: center;
@@ -49,14 +57,17 @@
             color: #4e7ae7;
             font-family: 'Poppins', sans-serif;
         }
+
         .logo i {
             font-size: 28px;
         }
+
         nav ul {
             display: flex;
             list-style: none;
             gap: 30px;
         }
+
         nav a {
             text-decoration: none;
             color: rgba(255, 255, 255, 0.8);
@@ -66,10 +77,13 @@
             padding: 8px 15px;
             border-radius: 8px;
         }
-        nav a:hover, nav a.active {
+
+        nav a:hover,
+        nav a.active {
             color: #4e7ae7;
             background: rgba(78, 122, 231, 0.1);
         }
+
         .btn {
             padding: 12px 24px;
             border-radius: 8px;
@@ -78,20 +92,24 @@
             transition: all 0.3s;
             font-size: 16px;
         }
+
         .btn-primary {
             background: linear-gradient(135deg, #4e7ae7 0%, #7a4ee7 100%);
             color: white;
             border: none;
         }
+
         .btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(78, 122, 231, 0.4);
         }
+
         .hero {
             padding: 180px 0 100px;
             text-align: center;
             background: radial-gradient(circle at top right, rgba(78, 122, 231, 0.2), transparent 400px), radial-gradient(circle at bottom left, rgba(122, 78, 231, 0.2), transparent 400px);
         }
+
         .hero h1 {
             font-size: 3.5rem;
             font-weight: 700;
@@ -100,6 +118,7 @@
             font-family: 'Poppins', sans-serif;
             animation: fadeInUp 1s ease;
         }
+
         .hero p {
             font-size: 1.2rem;
             color: rgba(255, 255, 255, 0.8);
@@ -107,12 +126,14 @@
             margin: 0 auto 40px;
             animation: fadeInUp 1.2s ease;
         }
+
         .hero-buttons {
             display: flex;
             gap: 15px;
             justify-content: center;
             animation: fadeInUp 1.4s ease;
         }
+
         .content-section {
             padding: 100px 0;
             background: rgba(20, 20, 20, 0.7);
@@ -121,26 +142,31 @@
             backdrop-filter: blur(10px);
             border: 1px solid #333;
         }
+
         .section-title {
             text-align: center;
             margin-bottom: 60px;
         }
+
         .section-title h2 {
             font-size: 2.5rem;
             color: white;
             margin-bottom: 15px;
             font-family: 'Poppins', sans-serif;
         }
+
         .section-title p {
             color: rgba(255, 255, 255, 0.7);
             max-width: 600px;
             margin: 0 auto;
         }
+
         .feature-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 30px;
         }
+
         .feature-card {
             background: rgba(30, 30, 30, 0.7);
             border-radius: 12px;
@@ -151,15 +177,18 @@
             opacity: 0;
             transform: translateY(20px);
         }
+
         .feature-card.visible {
             opacity: 1;
             transform: translateY(0);
         }
+
         .feature-card:hover {
             transform: translateY(-10px);
             box-shadow: 0 15px 35px rgba(78, 122, 231, 0.2);
             border-color: #4e7ae7;
         }
+
         .feature-icon {
             width: 70px;
             height: 70px;
@@ -172,19 +201,23 @@
             color: white;
             font-size: 28px;
         }
+
         .feature-card h3 {
             font-size: 1.4rem;
             margin-bottom: 15px;
             color: white;
             font-family: 'Poppins', sans-serif;
         }
+
         .feature-card p {
             color: rgba(255, 255, 255, 0.8);
         }
+
         .highlight {
             color: #4e7ae7;
             font-weight: 600;
         }
+
         footer {
             background: rgba(10, 10, 10, 0.9);
             color: white;
@@ -192,37 +225,45 @@
             margin-top: 60px;
             border-top: 1px solid #333;
         }
+
         .footer-content {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 40px;
             margin-bottom: 40px;
         }
+
         .footer-column h3 {
             font-size: 1.2rem;
             margin-bottom: 20px;
             font-family: 'Poppins', sans-serif;
             color: #4e7ae7;
         }
+
         .footer-column ul {
             list-style: none;
         }
+
         .footer-column ul li {
             margin-bottom: 10px;
         }
+
         .footer-column a {
             color: rgba(255, 255, 255, 0.7);
             text-decoration: none;
             transition: color 0.3s;
         }
+
         .footer-column a:hover {
             color: #4e7ae7;
         }
+
         .social-icons {
             display: flex;
             gap: 15px;
             margin-top: 20px;
         }
+
         .social-icons a {
             display: flex;
             align-items: center;
@@ -233,61 +274,74 @@
             background: rgba(255, 255, 255, 0.1);
             transition: all 0.3s;
         }
+
         .social-icons a:hover {
             background: #4e7ae7;
             transform: translateY(-3px);
         }
+
         .copyright {
             text-align: center;
             padding-top: 30px;
             border-top: 1px solid rgba(255, 255, 255, 0.1);
             color: rgba(255, 255, 255, 0.6);
         }
+
         @keyframes fadeInUp {
             from {
                 opacity: 0;
                 transform: translateY(20px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
             }
         }
+
         @keyframes fadeIn {
             from {
                 opacity: 0;
             }
+
             to {
                 opacity: 1;
             }
         }
+
         @media (max-width: 768px) {
             .header-content {
                 flex-direction: column;
                 gap: 15px;
             }
+
             nav ul {
                 gap: 10px;
                 flex-wrap: wrap;
                 justify-content: center;
             }
+
             nav a {
                 padding: 6px 12px;
                 font-size: 14px;
             }
+
             .hero h1 {
                 font-size: 2.5rem;
             }
+
             .hero-buttons {
                 flex-direction: column;
                 align-items: center;
             }
+
             .feature-grid {
                 grid-template-columns: 1fr;
             }
         }
     </style>
 </head>
+
 <body>
     <header>
         <div class="container">
@@ -306,6 +360,12 @@
                     </ul>
                 </nav>
                 <div class="auth-buttons">
+                    {% if current_user.is_authenticated %}
+                    <span style="color: white; margin-right: 15px;">Welcome, {{ current_user.name }}!</span>
+                    <a href="/logout"><button class="btn btn-secondary" style="margin-right: 10px;">Logout</button></a>
+                    {% else %}
+                    <a href="/login"><button class="btn btn-secondary" style="margin-right: 10px;">Login</button></a>
+                    {% endif %}
                     <a href="/next"><button class="btn btn-primary">Get Started</button></a>
                 </div>
             </div>
@@ -315,7 +375,8 @@
         <div class="container">
             <div class="hero">
                 <h1>Understand Anything</h1>
-                <p>Your research and thinking partner, grounded in the information you trust, powered by advanced AI models.</p>
+                <p>Your research and thinking partner, grounded in the information you trust, powered by advanced AI
+                    models.</p>
                 <div class="hero-buttons">
                     <a href="/next"><button class="btn btn-primary">Try Smart Summarizer</button></a>
                 </div>
@@ -334,7 +395,9 @@
                         <i class="fas fa-graduation-cap"></i>
                     </div>
                     <h3>Power Study</h3>
-                    <p>Upload lecture recordings, textbook chapters, and research papers. Ask Smart Summarizer to explain complex concepts in simple terms, provide real-world examples, and reinforce your understanding.</p>
+                    <p>Upload lecture recordings, textbook chapters, and research papers. Ask Smart Summarizer to
+                        explain complex concepts in simple terms, provide real-world examples, and reinforce your
+                        understanding.</p>
                     <p class="highlight">Learn faster and deeper.</p>
                 </div>
                 <div class="feature-card">
@@ -342,7 +405,8 @@
                         <i class="fas fa-lightbulb"></i>
                     </div>
                     <h3>Organize Your Thinking</h3>
-                    <p>Upload your source material and let Smart Summarizer create a polished presentation outline, complete with key talking points and supporting evidence.</p>
+                    <p>Upload your source material and let Smart Summarizer create a polished presentation outline,
+                        complete with key talking points and supporting evidence.</p>
                     <p class="highlight">Present with confidence.</p>
                 </div>
                 <div class="feature-card">
@@ -350,7 +414,8 @@
                         <i class="fas fa-rocket"></i>
                     </div>
                     <h3>Spark New Ideas</h3>
-                    <p>Upload brainstorming notes, market research, and competitor analysis. Ask Smart Summarizer to identify trends, generate new product ideas, and uncover hidden opportunities.</p>
+                    <p>Upload brainstorming notes, market research, and competitor analysis. Ask Smart Summarizer to
+                        identify trends, generate new product ideas, and uncover hidden opportunities.</p>
                     <p class="highlight">Unlock your creative potential.</p>
                 </div>
             </div>
@@ -368,21 +433,24 @@
                         <i class="fas fa-cloud-upload-alt"></i>
                     </div>
                     <h3>Step 1: Upload</h3>
-                    <p>Upload PDFs, websites, YouTube videos, audio files, Google Docs, or Google Slides from your device or cloud storage.</p>
+                    <p>Upload PDFs, websites, YouTube videos, audio files, Google Docs, or Google Slides from your
+                        device or cloud storage.</p>
                 </div>
                 <div class="feature-card">
                     <div class="feature-icon">
                         <i class="fas fa-cogs"></i>
                     </div>
                     <h3>Step 2: Process</h3>
-                    <p>Our AI analyzes your content, identifies key concepts, and finds connections between different pieces of information.</p>
+                    <p>Our AI analyzes your content, identifies key concepts, and finds connections between different
+                        pieces of information.</p>
                 </div>
                 <div class="feature-card">
                     <div class="feature-icon">
                         <i class="fas fa-file-alt"></i>
                     </div>
                     <h3>Step 3: Summarize</h3>
-                    <p>Receive comprehensive summaries, visual mind maps, audio overviews, and detailed reports tailored to your needs.</p>
+                    <p>Receive comprehensive summaries, visual mind maps, audio overviews, and detailed reports tailored
+                        to your needs.</p>
                 </div>
             </div>
         </div>
@@ -399,21 +467,24 @@
                         <i class="fas fa-user-graduate"></i>
                     </div>
                     <h3>Students & Researchers</h3>
-                    <p>Summarize textbooks, research papers, and lecture notes. Create study guides and flashcards for exam preparation.</p>
+                    <p>Summarize textbooks, research papers, and lecture notes. Create study guides and flashcards for
+                        exam preparation.</p>
                 </div>
                 <div class="feature-card">
                     <div class="feature-icon">
                         <i class="fas fa-briefcase"></i>
                     </div>
                     <h3>Business Professionals</h3>
-                    <p>Analyze market reports, competitor information, and lengthy business documents. Extract key insights quickly.</p>
+                    <p>Analyze market reports, competitor information, and lengthy business documents. Extract key
+                        insights quickly.</p>
                 </div>
                 <div class="feature-card">
                     <div class="feature-icon">
                         <i class="fas fa-book-reader"></i>
                     </div>
                     <h3>Content Creators</h3>
-                    <p>Research topics faster, generate content ideas, and create outlines for articles, videos, and presentations.</p>
+                    <p>Research topics faster, generate content ideas, and create outlines for articles, videos, and
+                        presentations.</p>
                 </div>
             </div>
         </div>
@@ -430,21 +501,24 @@
                         <i class="fas fa-dna"></i>
                     </div>
                     <h3>Our Technology</h3>
-                    <p>Smart Summarizer uses cutting-edge AI and natural language processing to analyze and summarize complex information while maintaining context and accuracy.</p>
+                    <p>Smart Summarizer uses cutting-edge AI and natural language processing to analyze and summarize
+                        complex information while maintaining context and accuracy.</p>
                 </div>
                 <div class="feature-card">
                     <div class="feature-icon">
                         <i class="fas fa-shield-alt"></i>
                     </div>
                     <h3>Privacy & Security</h3>
-                    <p>Your data is encrypted and secure. We never share your documents with third parties, and you maintain full ownership of your content.</p>
+                    <p>Your data is encrypted and secure. We never share your documents with third parties, and you
+                        maintain full ownership of your content.</p>
                 </div>
                 <div class="feature-card">
                     <div class="feature-icon">
                         <i class="fas fa-globe"></i>
                     </div>
                     <h3>Our Mission</h3>
-                    <p>We believe in making information accessible and understandable to everyone, saving time and enhancing learning and productivity.</p>
+                    <p>We believe in making information accessible and understandable to everyone, saving time and
+                        enhancing learning and productivity.</p>
                 </div>
             </div>
         </div>
@@ -454,7 +528,8 @@
             <div class="footer-content">
                 <div class="footer-column">
                     <h3>Smart Summarizer</h3>
-                    <p>Your AI-powered research partner for understanding complex information quickly and efficiently.</p>
+                    <p>Your AI-powered research partner for understanding complex information quickly and efficiently.
+                    </p>
                     <div class="social-icons">
                         <a href="#"><i class="fab fa-twitter"></i></a>
                         <a href="#"><i class="fab fa-facebook-f"></i></a>
@@ -496,10 +571,10 @@
         </div>
     </footer>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const navLinks = document.querySelectorAll('nav a');
             navLinks.forEach(link => {
-                link.addEventListener('click', function(e) {
+                link.addEventListener('click', function (e) {
                     e.preventDefault();
                     const targetId = this.getAttribute('href');
                     const targetSection = document.querySelector(targetId);
@@ -522,7 +597,7 @@
                 });
             }, { threshold: 0.1 });
             featureCards.forEach(card => observer.observe(card));
-            window.addEventListener('scroll', function() {
+            window.addEventListener('scroll', function () {
                 let current = '';
                 const sections = document.querySelectorAll('.content-section');
                 sections.forEach(section => {
@@ -542,4 +617,5 @@
         });
     </script>
 </body>
+
 </html>
